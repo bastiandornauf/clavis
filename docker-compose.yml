@@ -1,0 +1,17 @@
+services:
+  clavis:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      CLAVIS_DATA_DIR: /data
+      DJANGO_DEBUG: "1"
+      DJANGO_ALLOWED_HOSTS: "*"
+    volumes:
+      - clavis-data:/data
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+volumes:
+  clavis-data:

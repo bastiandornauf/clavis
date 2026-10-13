@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="page-title">Saved</h1>
+  <nav class="subnav" aria-label="Saved items">
+    <a href="{% url 'annotations:bookmarks' %}">Bookmarks</a>
+    <a href="{% url 'annotations:notes' %}" aria-current="page">Notes</a>
+  </nav>
+  {% if notes %}
+    <ul class="result-list">
+      {% for note in notes %}
+        <li>
+          <h2>
+            <a href="{% url 'reader:section' note.book_slug note.section_path %}">
+              {{ note.title }}
+            </a>
+          </h2>
+          <p class="citation">{{ note.book_slug }} → {{ note.section_path }}</p>
+          <p>{{ note.body }}</p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty-state">No notes yet.</div>
+  {% endif %}
+{% endblock %}

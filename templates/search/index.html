@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="page-title">Search</h1>
+
+  <form class="filter-bar" method="get" action="{% url 'search:index' %}" role="search">
+    <label>
+      Query
+      <input type="search" name="q" value="{{ query }}" placeholder="Pilum of Fire" required>
+    </label>
+    <label>
+      Edition
+      <select name="edition">
+        <option value="">All</option>
+        {% for value, label in edition_choices %}
+          <option value="{{ value }}" {% if selected_edition == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Book
+      <select name="book">
+        <option value="">All</option>
+        {% for book in books %}
+          <option value="{{ book.slug }}" {% if selected_book == book.slug %}selected{% endif %}>{{ book.title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Status
+      <select name="status">
+        <option value="">All</option>
+        {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Search</button>
+  </form>
+
+  {% if query and not hits %}
+    <div class="empty-state">No matches for “{{ query }}”.</div>
+  {% endif %}
+
+  {% if hits %}
+    <ul class="result-list">
+      {% for hit in hits %}
+        <li>
+          <h2>
+            <a href="{% url 'reader:section' hit.section.book.slug hit.section.path %}{% if return_query %}?{{ return_query }}{% endif %}">
+              {{ hit.section.display_title }}
+            </a>
+          </h2>
+          <p class="citation">{{ hit.citation }}</p>
+          <p>{{ hit.snippet|safe }}</p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}

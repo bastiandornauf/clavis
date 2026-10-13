@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="page-title">Library</h1>
+  {% if not current_snapshot %}
+    <div class="empty-state">
+      <p>No sources imported yet.</p>
+      <p><a class="button" href="{% url 'sources:status' %}">Import sources</a></p>
+    </div>
+  {% endif %}
+
+  {% if current_snapshot %}
+    <form class="filter-bar" method="get" action="{% url 'library:index' %}">
+      <label>
+        Edition
+        <select name="edition">
+          <option value="">All</option>
+          {% for value, label in edition_choices %}
+            <option value="{{ value }}" {% if selected_edition == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Status
+        <select name="status">
+          <option value="">All</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit">Filter</button>
+    </form>
+
+    <p class="filter-count" aria-live="polite">
+      {% if book_count == 0 %}
+        0 books
+      {% elif book_count == 1 %}
+        1 book
+      {% else %}
+        {{ book_count }} books
+      {% endif %}
+    </p>
+
+    {% if books %}
+      <div class="book-grid">
+        {% for book in books %}
+          <a class="book-card" href="{% url 'reader:book' book.slug %}">
+            <h2>{{ book.title }}</h2>
+            <p class="meta">
+              <span class="badge">{{ book.get_edition_display }}</span>
+              <span class="badge">{{ book.get_review_status_display }}</span>
+              {{ book.section_count }} sections
+            </p>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">No books match these filters.</div>
+    {% endif %}
+
+    <p class="meta page-foot-meta">
+      Current sources: commit <code>{{ current_snapshot.commit_sha|slice:":7" }}</code>
+      ({{ current_snapshot.imported_at }}).
+      <a href="{% url 'sources:status' %}">Sources</a>
+    </p>
+  {% endif %}
+{% endblock %}

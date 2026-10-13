@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% if back_to_search_url %}
+    <p class="context-bar">
+      <a href="{{ back_to_search_url }}">← Back to search results</a>
+    </p>
+  {% endif %}
+
+  <div class="reader">
+    <aside class="toc-panel">
+      <nav class="toc" id="reader-toc" aria-label="Table of contents">
+        <div class="toc__chrome">
+          <h2>
+            <a href="{% url 'library:index' %}">Library</a>
+            <span aria-hidden="true">/</span>
+            {{ book.title }}
+          </h2>
+          <div class="toc-depth" role="group" aria-label="TOC depth">
+            <a href="?toc=1&amp;view={{ view_mode }}{% if request.GET.q %}&amp;q={{ request.GET.q|urlencode }}{% endif %}"
+               class="{% if toc_depth == 1 %}is-active{% endif %}"
+               title="Top-level headings only (H1)">H1</a>
+            <a href="?toc=2&amp;view={{ view_mode }}{% if request.GET.q %}&amp;q={{ request.GET.q|urlencode }}{% endif %}"
+               class="{% if toc_depth == 2 %}is-active{% endif %}"
+               title="Down to H2">H2</a>
+            <a href="?toc=3&amp;view={{ view_mode }}{% if request.GET.q %}&amp;q={{ request.GET.q|urlencode }}{% endif %}"
+               class="{% if toc_depth == 3 %}is-active{% endif %}"
+               title="Down to H3">H3</a>
+            <a href="?toc=6&amp;view={{ view_mode }}{% if request.GET.q %}&amp;q={{ request.GET.q|urlencode }}{% endif %}"
+               class="{% if toc_depth == 6 %}is-active{% endif %}"
+               title="All headings">All</a>
+          </div>
+        </div>
+        <div class="toc__list" id="toc-list">
+          <ul class="toc-tree" data-toc-tree>
+            {% for node in toc_tree %}
+              {% include "reader/_toc_node.html" with node=node %}
+            {% endfor %}
+          </ul>
+        </div>
+      </nav>
+      <script>
+        (function () {
+          var list = document.getElementById("toc-list");
+          if (!list) return;
+          // Keep link navigation from also toggling the disclosure.
+          list.querySelectorAll("a.toc-tree__link").forEach(function (link) {
+            link.addEventListener("click", function (event) {
+              event.stopPropagation();
+            });
+          });
+          var current = list.querySelector('a[aria-current="true"]');
+          if (!current) return;
+          var listRect = list.getBoundingClientRect();
+          var itemRect = current.getBoundingClientRect();
+          list.scrollTop += itemRect.top - listRect.top - list.clientHeight / 2 + itemRect.height / 2;
+        })();
+      </script>
+    </aside>
+
+    <div class="reader-main">
+      <article class="reader-article">
+        <header class="reader-heading">
+          {% include "components/breadcrumbs.html" with breadcrumbs=breadcrumbs %}
+          <h1>{{ section.display_title }}</h1>
+          {% if show_header_badges and catalog_entries %}
+            <p class="entry-badges" aria-label="Recognized entries">
+              {% for entry in catalog_entries %}
+                <a class="entry-badge entry-badge--{{ entry.entry_type }}"
+                   href="{% url 'catalog:detail' entry.entry_type entry.slug %}">
+                  {{ entry.get_entry_type_display }}: {{ entry.name }}
+                </a>
+              {% endfor %}
+            </p>
+          {% endif %}
+          {% if child_count or view_mode == "branch" %}
+            <form class="view-toggle" method="get" action="">
+              {% if request.GET.q %}<input type="hidden" name="q" value="{{ request.GET.q }}">{% endif %}
+              {% if request.GET.edition %}<input type="hidden" name="edition" value="{{ request.GET.edition }}">{% endif %}
+              {% if request.GET.book %}<input type="hidden" name="book" value="{{ request.GET.book }}">{% endif %}
+              {% if request.GET.status %}<input type="hidden" name="status" value="{{ request.GET.status }}">{% endif %}
+              <input type="hidden" name="toc" value="{{ toc_depth }}">
+              <input type="hidden" name="view" value="single" data-view-fallback
+                     {% if view_mode == "branch" %}disabled{% endif %}>
+              <label class="view-toggle__label">
+                <input type="checkbox"
+                       name="view"
+                       value="branch"
+                       {% if view_mode == "branch" %}checked{% endif %}
+                       onchange="var f=this.form.querySelector('[data-view-fallback]'); if(f) f.disabled=this.checked; this.form.submit();">
+                Include subsections{% if child_count %} ({{ child_count }}){% endif %}
+              </label>
+            </form>
+          {% endif %}
+        </header>
+
+        {% for block in blocks %}
+          <section class="prose-block" id="s-{{ block.section.stable_id|slice:':12' }}">
+            {% if not forloop.first %}
+              <h{{ block.heading_level }} class="prose-block__title">
+                <a href="{% url 'reader:section' book.slug block.section.path %}?toc={{ toc_depth }}&view=single{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}">
+                  {{ block.section.display_title }}
+                </a>
+              </h{{ block.heading_level }}>
+              {% if block.catalog_entries %}
+                <p class="entry-badges entry-badges--inline" aria-label="Recognized entries">
+                  {% for entry in block.catalog_entries %}
+                    <a class="entry-badge entry-badge--{{ entry.entry_type }}"
+                       href="{% url 'catalog:detail' entry.entry_type entry.slug %}">
+                      {{ entry.get_entry_type_display }}
+                    </a>
+                  {% endfor %}
+                </p>
+              {% endif %}
+            {% endif %}
+            <div class="prose">
+              {{ block.body_html|safe }}
+            </div>
+          </section>
+        {% endfor %}
+
+        <nav class="pager" aria-label="Section pager">
+          <div>
+            {% if prev_section %}
+              <a href="{% url 'reader:section' book.slug prev_section.path %}?{{ return_query }}">← {{ prev_section.display_title }}</a>
+            {% endif %}
+          </div>
+          <div>
+            {% if next_section %}
+              <a href="{% url 'reader:section' book.slug next_section.path %}?{{ return_query }}">{{ next_section.display_title }} →</a>
+            {% endif %}
+          </div>
+        </nav>
+
+        <details class="reader-tools">
+          <summary>Save &amp; organize</summary>
+          <div class="section-actions" aria-label="Section tools">
+            <form method="post" action="{% url 'annotations:bookmark_toggle' %}">
+              {% csrf_token %}
+              <input type="hidden" name="stable_id" value="{{ section.stable_id }}">
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="secondary">
+                {% if is_bookmarked %}Remove bookmark{% else %}Bookmark{% endif %}
+              </button>
+            </form>
+
+            {% if campaigns %}
+              <form method="post" action="{% url 'campaigns:add' %}" class="inline-campaign">
+                {% csrf_token %}
+                <input type="hidden" name="stable_id" value="{{ section.stable_id }}">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <label class="visually-hidden" for="campaign-select">Campaign</label>
+                <select id="campaign-select" name="campaign" required>
+                  {% for campaign in campaigns %}
+                    <option value="{{ campaign.slug }}">{{ campaign.name }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="secondary">Add to campaign</button>
+              </form>
+            {% else %}
+              <a class="button secondary" href="{% url 'campaigns:create' %}">Create a campaign</a>
+            {% endif %}
+          </div>
+
+          <section class="note-panel" aria-labelledby="note-heading">
+            <h2 id="note-heading">Personal note</h2>
+            <form method="post" action="{% url 'annotations:note_save' %}" class="stack-form">
+              {% csrf_token %}
+              <input type="hidden" name="stable_id" value="{{ section.stable_id }}">
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <label>
+                Note
+                <textarea name="body" placeholder="Your notes stay local and never modify the source text.">{{ note.body|default:'' }}</textarea>
+              </label>
+              <button type="submit">Save note</button>
+            </form>
+          </section>
+
+          <details class="advanced-actions">
+            <summary>Pin excerpt to campaign</summary>
+            {% if campaigns %}
+              <form method="post" action="{% url 'campaigns:add' %}" class="stack-form">
+                {% csrf_token %}
+                <input type="hidden" name="stable_id" value="{{ section.stable_id }}">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <label>
+                  Campaign
+                  <select name="campaign" required>
+                    {% for campaign in campaigns %}
+                      <option value="{{ campaign.slug }}">{{ campaign.name }}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+                <label>
+                  Excerpt
+                  <textarea name="excerpt" required placeholder="Paste the exact passage to pin"></textarea>
+                </label>
+                <label>
+                  Note
+                  <textarea name="note" placeholder="Why this matters for the session"></textarea>
+                </label>
+                <button type="submit">Add excerpt</button>
+              </form>
+            {% else %}
+              <p class="meta"><a href="{% url 'campaigns:create' %}">Create a campaign</a> first.</p>
+            {% endif %}
+          </details>
+
+          {% if catalog_entries %}
+            <section class="related-entries" aria-labelledby="lexicon-heading">
+              <h2 id="lexicon-heading">In the lexicon</h2>
+              <ul class="result-list compact">
+                {% for entry in catalog_entries %}
+                  <li>
+                    <h3>
+                      <a href="{% url 'catalog:detail' entry.entry_type entry.slug %}">{{ entry.name }}</a>
+                    </h3>
+                    <p class="meta">
+                      <span class="badge">{{ entry.get_entry_type_display }}</span>
+                      {% if entry.summary %}{{ entry.summary }}{% endif %}
+                    </p>
+                  </li>
+                {% endfor %}
+              </ul>
+            </section>
+          {% endif %}
+
+          <p class="citation citation--quiet">{{ citation_text }}</p>
+        </details>
+      </article>
+    </div>
+  </div>
+{% endblock %}

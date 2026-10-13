@@ -1,0 +1,7 @@
+<p class="citation" {% if citation.review_status %}data-status="{{ citation.review_status }}"{% endif %}>
+  <span class="badge">Source</span>
+  {{ citation_text }}
+  {% if citation.review_status %}
+    <span class="badge">{{ citation.review_status }}</span>
+  {% endif %}
+</p>

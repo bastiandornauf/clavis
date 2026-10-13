@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="page-title">Saved</h1>
+  <nav class="subnav" aria-label="Saved items">
+    <a href="{% url 'annotations:bookmarks' %}" aria-current="page">Bookmarks</a>
+    <a href="{% url 'annotations:notes' %}">Notes</a>
+  </nav>
+  {% if bookmarks %}
+    <ul class="result-list">
+      {% for bookmark in bookmarks %}
+        <li>
+          <h2>
+            <a href="{% url 'reader:section' bookmark.book_slug bookmark.section_path %}">
+              {{ bookmark.title }}
+            </a>
+          </h2>
+          <p class="citation">{{ bookmark.book_slug }} → {{ bookmark.section_path }}</p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty-state">No bookmarks yet. Open a section in the reader to add one.</div>
+  {% endif %}
+{% endblock %}

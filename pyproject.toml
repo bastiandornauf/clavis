@@ -1,0 +1,43 @@
+[project]
+name = "clavis"
+version = "0.1.0"
+description = "Local Ars Magica source archive: readable books, search, and campaign notes."
+readme = "README.md"
+authors = [
+    { name = "cif", email = "bdornauf@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "bleach>=6.4.0",
+    "django>=5.0",
+    "markdown-it-py[linkify,plugins]>=4.2.0",
+    "pillow>=12.3.0",
+    "pygments>=2.21.0",
+]
+
+[project.scripts]
+clavis = "clavis.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-django>=4.14.0",
+    "ruff>=0.17.0",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["**/migrations/**"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% include "components/breadcrumbs.html" %}
+  <article class="reader-article notice-page">
+    <div class="prose">
+      {{ body_html|safe }}
+    </div>
+  </article>
+{% endblock %}

@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% include "components/breadcrumbs.html" with breadcrumbs=breadcrumbs %}
+  <h1 class="page-title">{{ entry_type_label }}</h1>
+  <nav class="subnav" aria-label="Lexicon types">
+    <a href="{% url 'catalog:list' 'spell' %}" {% if entry_type == 'spell' %}aria-current="page"{% endif %}>Spells ({{ counts.spell|default:0 }})</a>
+    <a href="{% url 'catalog:list' 'virtue' %}" {% if entry_type == 'virtue' %}aria-current="page"{% endif %}>Virtues ({{ counts.virtue|default:0 }})</a>
+    <a href="{% url 'catalog:list' 'flaw' %}" {% if entry_type == 'flaw' %}aria-current="page"{% endif %}>Flaws ({{ counts.flaw|default:0 }})</a>
+    <a href="{% url 'catalog:list' 'story_seed' %}" {% if entry_type == 'story_seed' %}aria-current="page"{% endif %}>Story seeds ({{ counts.story_seed|default:0 }})</a>
+    <a href="{% url 'catalog:list' 'creature' %}" {% if entry_type == 'creature' %}aria-current="page"{% endif %}>Creatures ({{ counts.creature|default:0 }})</a>
+    <a href="{% url 'catalog:list' 'character' %}" {% if entry_type == 'character' %}aria-current="page"{% endif %}>Characters ({{ counts.character|default:0 }})</a>
+    <a href="{% url 'catalog:list' 'guideline' %}" {% if entry_type == 'guideline' %}aria-current="page"{% endif %}>Guidelines ({{ counts.guideline|default:0 }})</a>
+    <a href="{% url 'catalog:list' 'ability' %}" {% if entry_type == 'ability' %}aria-current="page"{% endif %}>Abilities ({{ counts.ability|default:0 }})</a>
+  </nav>
+
+  <form class="filter-bar" method="get">
+    <label>
+      Name
+      <input type="search" name="q" value="{{ query }}" placeholder="Filter by name">
+    </label>
+    {% if entry_type == 'spell' %}
+      <label>
+        Technique
+        <input type="text" name="technique" value="{{ selected_technique }}" placeholder="Creo">
+      </label>
+      <label>
+        Form
+        <input type="text" name="form" value="{{ selected_form }}" placeholder="Ignem">
+      </label>
+      <label>
+        Level min
+        <input type="text" name="level_min" value="{{ level_min }}" inputmode="numeric">
+      </label>
+      <label>
+        Level max
+        <input type="text" name="level_max" value="{{ level_max }}" inputmode="numeric">
+      </label>
+    {% elif entry_type == 'virtue' or entry_type == 'flaw' %}
+      <label>
+        Magnitude
+        <select name="magnitude">
+          <option value="">All</option>
+          <option value="Major" {% if selected_magnitude == 'Major' %}selected{% endif %}>Major</option>
+          <option value="Minor" {% if selected_magnitude == 'Minor' %}selected{% endif %}>Minor</option>
+        </select>
+      </label>
+    {% elif entry_type == 'creature' %}
+      <label>
+        Realm
+        <select name="category">
+          <option value="">All</option>
+          <option value="Magic" {% if selected_category == 'Magic' %}selected{% endif %}>Magic</option>
+          <option value="Faerie" {% if selected_category == 'Faerie' %}selected{% endif %}>Faerie</option>
+          <option value="Infernal" {% if selected_category == 'Infernal' %}selected{% endif %}>Infernal</option>
+          <option value="Divine" {% if selected_category == 'Divine' %}selected{% endif %}>Divine</option>
+        </select>
+      </label>
+      <label>
+        Might min
+        <input type="text" name="level_min" value="{{ level_min }}" inputmode="numeric">
+      </label>
+      <label>
+        Might max
+        <input type="text" name="level_max" value="{{ level_max }}" inputmode="numeric">
+      </label>
+    {% elif entry_type == 'character' %}
+      <label>
+        House
+        <input type="text" name="category" value="{{ selected_category }}" placeholder="Tremere">
+      </label>
+    {% elif entry_type == 'guideline' %}
+      <label>
+        Technique
+        <input type="text" name="technique" value="{{ selected_technique }}" placeholder="Creo">
+      </label>
+      <label>
+        Form
+        <input type="text" name="form" value="{{ selected_form }}" placeholder="Ignem">
+      </label>
+      <label>
+        Base min
+        <input type="text" name="level_min" value="{{ level_min }}" inputmode="numeric">
+      </label>
+      <label>
+        Base max
+        <input type="text" name="level_max" value="{{ level_max }}" inputmode="numeric">
+      </label>
+    {% elif entry_type == 'ability' %}
+      <label>
+        Category
+        <select name="category">
+          <option value="">All</option>
+          <option value="General" {% if selected_category == 'General' %}selected{% endif %}>General</option>
+          <option value="Academic" {% if selected_category == 'Academic' %}selected{% endif %}>Academic</option>
+          <option value="Arcane" {% if selected_category == 'Arcane' %}selected{% endif %}>Arcane</option>
+          <option value="Martial" {% if selected_category == 'Martial' %}selected{% endif %}>Martial</option>
+          <option value="Supernatural" {% if selected_category == 'Supernatural' %}selected{% endif %}>Supernatural</option>
+        </select>
+      </label>
+    {% endif %}
+    <label>
+      Book
+      <select name="book">
+        <option value="">All</option>
+        {% for book in books %}
+          <option value="{{ book.slug }}" {% if selected_book == book.slug %}selected{% endif %}>{{ book.title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Filter</button>
+  </form>
+
+  <p class="filter-count" aria-live="polite">
+    {% if result_count == 0 %}
+      0 results
+    {% elif result_count == 1 %}
+      1 result
+    {% elif result_count > display_limit %}
+      {{ result_count }} results (showing first {{ display_limit }})
+    {% else %}
+      {{ result_count }} results
+    {% endif %}
+  </p>
+
+  {% if entries %}
+    <ul class="result-list">
+      {% for entry in entries %}
+        <li>
+          <h2>
+            <a href="{% url 'catalog:detail' entry.entry_type entry.slug %}">{{ entry.name }}</a>
+          </h2>
+          <p class="meta">
+            <span class="badge">{{ entry.get_entry_type_display }}</span>
+            {% if entry.summary %}{{ entry.summary }}{% endif %}
+            · {{ entry.book.title }}
+          </p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty-state">
+      No {{ entry_type_label|lower }} matched these filters.
+      Try <a href="{% url 'search:index' %}?q={{ query|urlencode }}">full-text search</a>
+      if the entry exists but is not catalogued yet.
+    </div>
+  {% endif %}
+{% endblock %}

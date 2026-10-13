@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <header class="page-header">
+    <h1 class="page-title">Gallery</h1>
+    <p class="lede">
+      Official Open License art from the Atlas Games released-images pack
+      {% if image_count %}({{ image_count }} images){% endif %}.
+    </p>
+  </header>
+
+  {% if not has_images %}
+    <p class="empty-state">
+      No released images found. Sync Sources to fetch the Open License repository,
+      including the <code>released-images/</code> folder.
+    </p>
+  {% else %}
+    <nav class="gallery-jump" aria-label="Albums">
+      {% for album in albums %}
+        <a href="#album-{{ album.key|default:'logos' }}">{{ album.title }}</a>
+      {% endfor %}
+    </nav>
+
+    {% for album in albums %}
+      <section class="gallery-album" id="album-{{ album.key|default:'logos' }}">
+        <h2>{{ album.title }}</h2>
+        <ul class="gallery-grid">
+          {% for image in album.images %}
+            <li>
+              <figure>
+                <a href="{% url 'library:gallery_file' image.relative_path %}" target="_blank" rel="noopener">
+                  <img
+                    src="{% url 'library:gallery_file' image.relative_path %}"
+                    alt="{{ image.title }}"
+                    loading="lazy"
+                    decoding="async"
+                  >
+                </a>
+                <figcaption>{{ image.title }}</figcaption>
+              </figure>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endfor %}
+  {% endif %}
+{% endblock %}

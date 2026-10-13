@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="page-title">{{ campaign.name }}</h1>
+  {% if campaign.description %}
+    <p class="lede">{{ campaign.description }}</p>
+  {% endif %}
+  <p class="meta">Slug: <code>{{ campaign.slug }}</code> — use this when adding sections from the reader.</p>
+
+  {% if items %}
+    <ul class="result-list">
+      {% for row in items %}
+        <li>
+          <h2>
+            {% if row.section %}
+              <a href="{% url 'reader:section' row.section.book.slug row.section.path %}">{{ row.item.title }}</a>
+            {% else %}
+              {{ row.item.title }}
+            {% endif %}
+          </h2>
+          <p class="citation">
+            {{ row.item.get_item_type_display }} · {{ row.item.book_slug }} → {{ row.item.section_path }}
+          </p>
+          {% if row.item.source_changed %}
+            <p class="warning">Source changed — check excerpt</p>
+          {% endif %}
+          {% if row.item.excerpt_text %}
+            <blockquote>{{ row.item.excerpt_text }}</blockquote>
+          {% endif %}
+          <form method="post" action="{% url 'campaigns:update_note' campaign.slug row.item.pk %}" class="stack-form">
+            {% csrf_token %}
+            <label>
+              Note
+              <textarea name="note">{{ row.item.note }}</textarea>
+            </label>
+            <button type="submit" class="secondary">Save note</button>
+          </form>
+          <form method="post" action="{% url 'campaigns:remove' campaign.slug row.item.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="secondary">Remove</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty-state">This campaign has no items yet. Open a section in the reader and add it here.</div>
+  {% endif %}
+{% endblock %}

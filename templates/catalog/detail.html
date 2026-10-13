@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% include "components/breadcrumbs.html" %}
+
+  <h1 class="page-title">{{ entry.name }}</h1>
+  <p class="entry-badges">
+    <span class="entry-badge entry-badge--{{ entry.entry_type }}">{{ entry.get_entry_type_display }}</span>
+    <span class="badge">{{ entry.get_kind_display }}</span>
+  </p>
+  {% if entry.summary %}
+    <p class="lede">{{ entry.summary }}</p>
+  {% endif %}
+
+  <dl class="meta-grid">
+    {% if entry.entry_type == "creature" %}
+      {% if entry.category %}<div><dt>Realm</dt><dd>{{ entry.category }}</dd></div>{% endif %}
+      {% if entry.level != None %}<div><dt>Might</dt><dd>{{ entry.level }}</dd></div>{% endif %}
+      {% if entry.form %}<div><dt>Form</dt><dd>{{ entry.form }}</dd></div>{% endif %}
+    {% elif entry.entry_type == "character" %}
+      {% if entry.category %}<div><dt>House</dt><dd>{{ entry.category }}</dd></div>{% endif %}
+    {% elif entry.entry_type == "guideline" %}
+      {% if entry.technique %}<div><dt>Technique</dt><dd>{{ entry.technique }}</dd></div>{% endif %}
+      {% if entry.form %}<div><dt>Form</dt><dd>{{ entry.form }}</dd></div>{% endif %}
+      {% if entry.level != None %}<div><dt>Base</dt><dd>{{ entry.level }}</dd></div>{% endif %}
+    {% elif entry.entry_type == "ability" %}
+      {% if entry.category %}<div><dt>Category</dt><dd>{{ entry.category }}</dd></div>{% endif %}
+    {% else %}
+      {% if entry.technique %}<div><dt>Technique</dt><dd>{{ entry.technique }}</dd></div>{% endif %}
+      {% if entry.form %}<div><dt>Form</dt><dd>{{ entry.form }}</dd></div>{% endif %}
+      {% if entry.level != None %}<div><dt>Level</dt><dd>{{ entry.level }}</dd></div>{% endif %}
+      {% if entry.range %}<div><dt>Range</dt><dd>{{ entry.range }}</dd></div>{% endif %}
+      {% if entry.duration %}<div><dt>Duration</dt><dd>{{ entry.duration }}</dd></div>{% endif %}
+      {% if entry.target %}<div><dt>Target</dt><dd>{{ entry.target }}</dd></div>{% endif %}
+      {% if entry.magnitude %}<div><dt>Magnitude</dt><dd>{{ entry.magnitude }}</dd></div>{% endif %}
+      {% if entry.category %}<div><dt>Category</dt><dd>{{ entry.category }}</dd></div>{% endif %}
+    {% endif %}
+    <div><dt>Book</dt><dd>{{ entry.book.title }}</dd></div>
+  </dl>
+
+  {% if entry.evidence %}
+    <p class="meta">Evidence: <code>{{ entry.evidence }}</code></p>
+  {% endif %}
+
+  {% if section %}
+    <p><a class="button" href="{% url 'reader:section' section.book.slug section.path %}">Open in reader</a></p>
+  {% else %}
+    <p class="warning">Source section could not be resolved for the current import.</p>
+  {% endif %}
+
+  {% if related %}
+    <h2>Other matches</h2>
+    <ul class="result-list compact">
+      {% for item in related %}
+        <li>
+          <p class="meta">{{ item.book.title }} · {{ item.section_path }}</p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}

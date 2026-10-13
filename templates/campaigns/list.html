@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="page-title">Campaigns</h1>
+  <p class="lede">Collect source sections and excerpts for session prep. Items link back to the original text.</p>
+  <p><a class="button" href="{% url 'campaigns:create' %}">New campaign</a></p>
+
+  {% if campaigns %}
+    <ul class="result-list">
+      {% for campaign in campaigns %}
+        <li>
+          <h2><a href="{% url 'campaigns:detail' campaign.slug %}">{{ campaign.name }}</a></h2>
+          <p class="meta">{{ campaign.items.count }} item{{ campaign.items.count|pluralize }} · updated {{ campaign.updated_at }}</p>
+          {% if campaign.description %}<p>{{ campaign.description }}</p>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty-state">No campaigns yet.</div>
+  {% endif %}
+{% endblock %}

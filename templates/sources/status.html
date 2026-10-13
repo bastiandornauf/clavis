@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="page-title">Sources</h1>
+  <p class="meta">
+    Repository:
+    <a href="{{ source_repo_url }}">{{ source_repo_url }}</a>
+  </p>
+
+  {% if update_check.status == "available" %}
+    <p class="notice notice--update" role="status">
+      <strong>Updates available.</strong>
+      {{ update_check.message }}
+      {% if update_check.remote_sha %}
+        Remote <code>{{ update_check.remote_sha|slice:":7" }}</code>
+        {% if update_check.imported_sha %}
+          · imported <code>{{ update_check.imported_sha|slice:":7" }}</code>
+        {% endif %}
+      {% endif %}
+    </p>
+  {% elif update_check.status == "current" %}
+    <p class="meta" role="status">{{ update_check.message }}</p>
+  {% elif update_check.status == "missing" %}
+    <p class="notice" role="status">{{ update_check.message }}</p>
+  {% elif update_check.status == "unknown" %}
+    <p class="warning" role="status">Update check failed: {{ update_check.message }}</p>
+  {% endif %}
+
+  {% if current %}
+    <p class="meta">
+      Current: <code>{{ current.commit_sha }}</code> · {{ current.status }} · {{ current.imported_at }}
+      <br>{{ current.message }}
+    </p>
+  {% else %}
+    <div class="empty-state">No successful import yet.</div>
+  {% endif %}
+
+  <form method="post" class="stack-form">
+    {% csrf_token %}
+    <button type="submit" name="action" value="import">
+      {% if update_check.updates_available %}Sync and import updates{% else %}Sync and import{% endif %}
+    </button>
+  </form>
+
+  <h2>Recent imports</h2>
+  {% if history %}
+    <p class="meta">
+      Showing last {{ history|length }} of {{ history_total }}.
+      <a href="{% url 'sources:history_download' %}">Download full history (.txt)</a>
+    </p>
+    <ul class="result-list">
+      {% for snap in history %}
+        <li>
+          <strong>{{ snap.commit_sha|slice:":12" }}</strong>
+          · {{ snap.status }}
+          {% if snap.is_current %}<span class="badge">current</span>{% endif %}
+          <div class="meta">{{ snap.imported_at }} — {{ snap.message }}</div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="empty-state">No import history.</div>
+  {% endif %}
+{% endblock %}

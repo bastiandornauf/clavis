@@ -1,0 +1,28 @@
+<li class="toc-tree__item {% if node.is_in_path %}is-in-path{% endif %} {% if node.is_current %}is-current{% endif %}">
+  {% if node.children %}
+    <details class="toc-tree__branch" {% if node.is_open %}open{% endif %}>
+      <summary class="toc-tree__row">
+        <span class="toc-tree__twist" aria-hidden="true"></span>
+        <a class="toc-tree__link"
+           href="{% url 'reader:section' book.slug node.section.path %}?{{ return_query }}"
+           {% if node.is_current %}aria-current="true"{% endif %}>
+          {{ node.section.display_title }}
+        </a>
+      </summary>
+      <ul class="toc-tree">
+        {% for child in node.children %}
+          {% include "reader/_toc_node.html" with node=child %}
+        {% endfor %}
+      </ul>
+    </details>
+  {% else %}
+    <div class="toc-tree__row toc-tree__row--leaf">
+      <span class="toc-tree__twist toc-tree__twist--leaf" aria-hidden="true"></span>
+      <a class="toc-tree__link"
+         href="{% url 'reader:section' book.slug node.section.path %}?{{ return_query }}"
+         {% if node.is_current %}aria-current="true"{% endif %}>
+        {{ node.section.display_title }}
+      </a>
+    </div>
+  {% endif %}
+</li>

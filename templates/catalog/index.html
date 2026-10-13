@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="page-title">Lexicon</h1>
+
+  {% if not current_snapshot %}
+    <div class="empty-state">
+      <p>No sources imported yet.</p>
+      <p><a class="button" href="{% url 'sources:status' %}">Import sources</a></p>
+    </div>
+  {% else %}
+    <div class="book-grid">
+      <a class="book-card" href="{% url 'catalog:list' 'spell' %}">
+        <h2>Spells</h2>
+        <p class="meta">{{ counts.spell|default:0 }} definitions</p>
+      </a>
+      <a class="book-card" href="{% url 'catalog:list' 'virtue' %}">
+        <h2>Virtues</h2>
+        <p class="meta">{{ counts.virtue|default:0 }} definitions</p>
+      </a>
+      <a class="book-card" href="{% url 'catalog:list' 'flaw' %}">
+        <h2>Flaws</h2>
+        <p class="meta">{{ counts.flaw|default:0 }} definitions</p>
+      </a>
+      <a class="book-card" href="{% url 'catalog:list' 'story_seed' %}">
+        <h2>Story seeds</h2>
+        <p class="meta">{{ counts.story_seed|default:0 }} definitions</p>
+      </a>
+      <a class="book-card" href="{% url 'catalog:list' 'creature' %}">
+        <h2>Creatures</h2>
+        <p class="meta">{{ counts.creature|default:0 }} definitions</p>
+      </a>
+      <a class="book-card" href="{% url 'catalog:list' 'character' %}">
+        <h2>Characters</h2>
+        <p class="meta">{{ counts.character|default:0 }} definitions</p>
+      </a>
+      <a class="book-card" href="{% url 'catalog:list' 'guideline' %}">
+        <h2>Guidelines</h2>
+        <p class="meta">{{ counts.guideline|default:0 }} definitions</p>
+      </a>
+      <a class="book-card" href="{% url 'catalog:list' 'ability' %}">
+        <h2>Abilities</h2>
+        <p class="meta">{{ counts.ability|default:0 }} definitions</p>
+      </a>
+    </div>
+
+    <p class="lexicon-tools">
+      <a href="{% url 'catalog:coverage' %}">Coverage by book</a>
+    </p>
+  {% endif %}
+{% endblock %}
