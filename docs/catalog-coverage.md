@@ -57,12 +57,12 @@ Rough corpus signal (all 54 files, pattern hits ≠ unique entries):
 
 ### Tier B — strong saga value, messier structure
 
-| Type | Detection sketch | Why |
+| Type | Detection sketch (from book survey) | Why |
 |---|---|---|
-| **Covenant / Place** | Tribunal book chapter structure; named site headings; optional Aura | Setting prep |
-| **Organization** | House X, Mystery Cult, League, Tribunal institutions | Politics / affiliation |
-| **Boon / Hook** | `*Major/Minor Boon/Hook*` (Covenants economy) | Covenant design |
-| **Enchanted item / Lab project** | Lab chapter patterns, effect levels | Long-term play |
+| **Boon / Hook** | *Covenants* Ch.2: parent heading `Major/Minor … Boons/Hooks`; entries are bold lines `**Aura:**` / `**Immunity:**` in the body (not italic VF-style) | Covenant design |
+| **Covenant / Place** | Tribunal books (e.g. *Against the Dark*): named sites / oppida; optional Aura in lead; many are narrative H3/H4 without a single template | Setting prep |
+| **Organization** | *True Lineages*: House chapters + named offices (`Colentes Arcanorum`, `Seekers`, `Domus Magna`) | Politics / affiliation |
+| **Enchanted item / Lab** | Named enchanted items appear as short H5 writeups (`Chest of Good Food`); *Covenants* lab chapter is mostly lab *virtues/rules*, not item catalog — pair with adventure/tribunal books for items | Long-term play |
 
 ### Tier C — useful later / needs LLM or heavy editorial tags
 
@@ -120,19 +120,79 @@ Suggested quality targets (rules phase):
 - Guidelines: `Creo Ignem Guidelines` tables → base-level entries.
 - Abilities: `*Specialties: … (Category)*` writeups.
 
-### WP4 — Places / Covenants / Organizations
+### Book survey notes (Core + Covenants + Realms)
 
-- Start with named covenants in tribunal books; Aura when explicit.
-- Houses as organizations from Core “Houses of Hermes” sections.
+Pilots read: **Definitive Edition**, **Covenants**, **Through the Aegis** (wip),
+**Realms of Power: Faerie / Magic**, **Mythic Locations**, plus earlier tribunal/
+True Lineages notes. *Hooks* the supplement is **adventure scenarios**, not the
+covenant Boon/Hook list — do not treat it as a Boon source.
 
-### WP5 — Boons/Hooks + Lab/Items
+**Existing rules on these books (spot-check):**
+- Core: strong on spells / VF / abilities / guidelines; Might-creatures OK;
+  mundane bestiary beasts correctly *not* creatures (no Might).
+- Covenants book: almost no catalog yet (expected — Boons unused).
+- RoP Faerie/Magic: virtues/flaws + creatures present; places/tethers not typed.
+- Mythic Locations: place chapters mostly untyped; embedded Might callouts
+  correctly become creatures (e.g. Anne / Minerva Sulis).
 
-- After covenant model exists so links make sense.
+**Boon / Hook formats (three shapes):**
+1. **Covenants** Ch.2 — parent `Major Site Boons` etc.; body `**Aura:**` blocks.
+2. **Core** Ch.6 — shorter lists under `Major/Minor Boons|Hooks`; mostly same
+   bold pattern, but some **Minor Hooks** start as plain `Contested Resource:`
+   (no `**`).
+3. **Through the Aegis** — applied picks:
+   `**Mystical Allies (Major Surroundings Boon):**` (magnitude inside the name).
 
-### WP6 — Optional LLM pass
+**Places / covenants:**
+- Core Ch.6 example covenants by season (Vernus, Aestas, …) — short profiles.
+- Mythic Locations — whole book is places, but narrative (no single Aura lead).
+- RoP Magic — “Natural Tethers” (Caves, Forest, …) are aura *types*, not named sites.
+- Tribunal / Aegis — named covenants as chapter roots (`Jardin: A Summer Covenant`).
 
-- Only unclassified “interesting” headings / leftover Might failures.
-- Store as `extractor=llm`, always reviewable, app works offline without key.
+**Organizations:**
+- Core Ch.2 `House Bonisagus` … short blurbs (good stubs).
+- True Lineages — deep offices under each House.
+
+**Items / lab:**
+- Core Ch.8 + Covenants Ch.9 = procedures / lab virtues, not item cards.
+- Named enchanted items appear in Aegis/tribunals (`Joia's Trowel`, …).
+
+### Mundane beasts ✅
+
+Separate Lexicon type **beast** (GM-facing animals without Realm Might):
+`Characteristics: … Cun …` + Size/Qualities. Core bestiary + matching writeups.
+
+### WP4 — Boons & Hooks ✅
+
+Pilot: **Covenants** (full list) + **Core** Ch.6 (short list; handle plain-text
+Minor Hooks) + spot-check **Through the Aegis** applied lines.
+- Detect definition sections by title Major/Minor + Boon/Hook (+ Site/…).
+- Extract bold (and Core plain) name lines → one entry each.
+- Fields: name, magnitude, category, summary, evidence.
+- Do **not** use the *Hooks* adventure book as source.
+
+### WP5 — Places / Covenants ✅ (narrow, high precision)
+
+Named covenants/oppida (`The Covenant of…`, `Jardin: A Summer Covenant`,
+Core Vernus/Aestas/…) — not every Mythic Locations chapter yet.
+
+### WP6 — Organizations ✅
+
+Core House blurbs + True Lineages offices under House organization paths.
+
+### WP7 — Enchanted items ✅ (narrow)
+
+`This enchanted item` writeups only; lab procedure chapters excluded.
+Lab projects still deferred.
+
+### WP8 — Optional enrichment pass ✅ (scaffold)
+
+### WP8 — Optional enrichment pass ✅ (scaffold)
+
+- Command `enrich_catalog` (default `--provider dry-run`, no network).
+- `EnrichmentProposal` rows; accept promotes `CatalogEntry` with `extractor=llm`.
+- Remote LLM provider stub refuses without a wired implementation / API key.
+- Search UI stays keyword-only until a real embedding model exists.
 
 ## Suggested sequence for you
 
@@ -147,7 +207,7 @@ Suggested quality targets (rules phase):
 - Replacing reading with chat answers
 - Perfect OCR/structure fixes in upstream Markdown
 - Guaranteed extraction of every narrative NPC without a template
-- Semantic search (separate track; helps find uncatalogued text)
+- Generative RAG / chat answers (semantic/hybrid search is a separate shipped track)
 
 ## Decision checkpoints
 

@@ -37,6 +37,16 @@
         </select>
       </label>
     {% endif %}
+    {% if search_modes %}
+      <label>
+        Mode
+        <select name="mode">
+          {% for value, label in search_modes.items %}
+            <option value="{{ value }}" {% if selected_mode == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    {% endif %}
     <button type="submit">Search</button>
   </form>
   {% if query and not hits %}

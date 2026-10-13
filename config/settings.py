@@ -112,6 +112,17 @@ STATIC_ROOT = CLAVIS_DATA_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Optional AI tracks (Phase 1–2). App works fully offline without these.
+CLAVIS_LLM_API_KEY = os.environ.get("CLAVIS_LLM_API_KEY", "").strip()
+CLAVIS_ENRICH_ON_IMPORT = os.environ.get("CLAVIS_ENRICH_ON_IMPORT", "0") == "1"
+CLAVIS_EMBEDDINGS_BACKEND = os.environ.get("CLAVIS_EMBEDDINGS_BACKEND", "hashing-v1")
+CLAVIS_REBUILD_EMBEDDINGS_ON_IMPORT = (
+    os.environ.get("CLAVIS_REBUILD_EMBEDDINGS_ON_IMPORT", "0") == "1"
+)
+# Semantic/Hybrid stay out of the UI until a real embedding model lands.
+# Hashing backend remains available via management command for experiments.
+CLAVIS_SEARCH_MODES_ENABLED = os.environ.get("CLAVIS_SEARCH_MODES_ENABLED", "0") == "1"
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

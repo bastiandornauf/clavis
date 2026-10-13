@@ -70,6 +70,7 @@ def search_page(request: HttpRequest) -> HttpResponse:
             "selected_edition": edition,
             "selected_book": book_slug,
             "selected_status": effective_status if only else status,
+            "search_modes": {},
             "edition_choices": Book.Edition.choices,
             "status_choices": Book.ReviewStatus.choices,
             "return_query": urlencode(filter_params),

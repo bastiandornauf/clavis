@@ -2,6 +2,13 @@
 
 {% block content %}
   <h1 class="page-title">Lexicon</h1>
+  <p class="lexicon-intro">
+    Clavis tries to recognize structured entries—spells, virtues, creatures, and
+    more—from the imported Open License books. The sources were written to be
+    read, not catalogued, so recognition is imperfect: some entries are missed,
+    and a few false hits slip through. Used with the reader and search, the
+    Lexicon is still a practical index for play and prep.
+  </p>
 
   {% if not current_snapshot %}
     <div class="empty-state">
@@ -30,6 +37,10 @@
         <h2>Creatures</h2>
         <p class="meta">{{ counts.creature|default:0 }} definitions</p>
       </a>
+      <a class="book-card" href="{% url 'catalog:list' 'beast' %}">
+        <h2>Beasts</h2>
+        <p class="meta">{{ counts.beast|default:0 }} definitions</p>
+      </a>
       <a class="book-card" href="{% url 'catalog:list' 'character' %}">
         <h2>Characters</h2>
         <p class="meta">{{ counts.character|default:0 }} definitions</p>
@@ -41,6 +52,26 @@
       <a class="book-card" href="{% url 'catalog:list' 'ability' %}">
         <h2>Abilities</h2>
         <p class="meta">{{ counts.ability|default:0 }} definitions</p>
+      </a>
+      <a class="book-card" href="{% url 'catalog:list' 'boon' %}">
+        <h2>Boons</h2>
+        <p class="meta">{{ counts.boon|default:0 }} definitions</p>
+      </a>
+      <a class="book-card" href="{% url 'catalog:list' 'hook' %}">
+        <h2>Hooks</h2>
+        <p class="meta">{{ counts.hook|default:0 }} definitions</p>
+      </a>
+      <a class="book-card" href="{% url 'catalog:list' 'organization' %}">
+        <h2>Organizations</h2>
+        <p class="meta">{{ counts.organization|default:0 }} definitions</p>
+      </a>
+      <a class="book-card" href="{% url 'catalog:list' 'place' %}">
+        <h2>Places</h2>
+        <p class="meta">{{ counts.place|default:0 }} definitions</p>
+      </a>
+      <a class="book-card" href="{% url 'catalog:list' 'item' %}">
+        <h2>Items</h2>
+        <p class="meta">{{ counts.item|default:0 }} definitions</p>
       </a>
     </div>
 

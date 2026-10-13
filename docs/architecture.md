@@ -10,10 +10,10 @@ into a readable, searchable library with personal campaign overlays.
 | `apps.sources` | Git sync, source snapshots, import orchestration, DB backup |
 | `apps.library` | Books and sections, Markdown structural parse, stable IDs, released-image gallery, curated Guides links |
 | `apps.reader` | TOC, section rendering, navigation |
-| `apps.search` | SQLite FTS5 index and query UI |
+| `apps.search` | SQLite FTS5 + optional section embeddings (keyword / semantic / hybrid) |
 | `apps.annotations` | Bookmarks, notes, last-read position (lists live under Workspace) |
 | `apps.campaigns` | Workspace hub (campaigns / bookmarks / notes tabs) + campaign detail |
-| `apps.catalog` | Rule-based lexicon (spells, virtues/flaws, seeds, creatures, characters, guidelines, abilities) |
+| `apps.catalog` | Rule-based lexicon (incl. beasts, boons/hooks, orgs, places, items) + reviewable enrichment leftovers |
 
 Shared library code lives under `src/clavis/`:
 
@@ -63,9 +63,19 @@ Rules currently recognize:
 
 Heading titles decode CommonMark escapes (`Ceremony\*` → `Ceremony*`) for display and catalog names. Unrecognized content remains available via full-text search.
 
+## AI overlays (shipped scaffold)
+
+- **Enrichment** — `uv run python manage.py enrich_catalog [--dry-run]` scans
+  rule leftovers; default is **typed/signal only** (Might / Specialties misses),
+  not a dump of every heading. `--include-untyped` is opt-in noise.
+  Cleanup: `--clear-noise`. Accept: `--accept-pending` or admin.
+- **Embeddings** — `rebuild_embeddings` can build local `hashing-v1` vectors for
+  experiments. Search UI is **keyword-only** until a real embedding model is
+  wired (`CLAVIS_SEARCH_MODES_ENABLED=1` is opt-in and still not product-ready
+  with hashing).
+
 ## Deferred phases
 
-3. Optional LLM enrichment at import only
-4. Local semantic search on Apple Silicon
 5. Redistributable catalog packs; more entry types (places, covenants, …)
-6. Later: RAG assistant, campaign AI, saga profiles
+6. Stronger local embedding backends (e.g. Apple Silicon MLX)
+7. Later: grounded RAG assistant, campaign AI, saga profiles

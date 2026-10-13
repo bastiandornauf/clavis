@@ -17,6 +17,8 @@
       {% if entry.category %}<div><dt>Realm</dt><dd>{{ entry.category }}</dd></div>{% endif %}
       {% if entry.level != None %}<div><dt>Might</dt><dd>{{ entry.level }}</dd></div>{% endif %}
       {% if entry.form %}<div><dt>Form</dt><dd>{{ entry.form }}</dd></div>{% endif %}
+    {% elif entry.entry_type == "beast" %}
+      {% if entry.category %}<div><dt>Kind</dt><dd>{{ entry.category }}</dd></div>{% endif %}
     {% elif entry.entry_type == "character" %}
       {% if entry.category %}<div><dt>House</dt><dd>{{ entry.category }}</dd></div>{% endif %}
     {% elif entry.entry_type == "guideline" %}
@@ -25,6 +27,14 @@
       {% if entry.level != None %}<div><dt>Base</dt><dd>{{ entry.level }}</dd></div>{% endif %}
     {% elif entry.entry_type == "ability" %}
       {% if entry.category %}<div><dt>Category</dt><dd>{{ entry.category }}</dd></div>{% endif %}
+    {% elif entry.entry_type == "boon" or entry.entry_type == "hook" %}
+      {% if entry.magnitude %}<div><dt>Magnitude</dt><dd>{{ entry.magnitude }}</dd></div>{% endif %}
+      {% if entry.category %}<div><dt>Category</dt><dd>{{ entry.category }}</dd></div>{% endif %}
+    {% elif entry.entry_type == "organization" %}
+      {% if entry.category %}<div><dt>Kind</dt><dd>{{ entry.category }}</dd></div>{% endif %}
+      {% if entry.form %}<div><dt>House</dt><dd>{{ entry.form }}</dd></div>{% endif %}
+    {% elif entry.entry_type == "place" or entry.entry_type == "item" %}
+      {% if entry.category %}<div><dt>Kind</dt><dd>{{ entry.category }}</dd></div>{% endif %}
     {% else %}
       {% if entry.technique %}<div><dt>Technique</dt><dd>{{ entry.technique }}</dd></div>{% endif %}
       {% if entry.form %}<div><dt>Form</dt><dd>{{ entry.form }}</dd></div>{% endif %}

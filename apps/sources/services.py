@@ -201,6 +201,21 @@ def import_sources(
 
         rebuild_fts_for_books(book_ids)
         rebuild_catalog_for_books(book_ids)
+        if getattr(settings, "CLAVIS_REBUILD_EMBEDDINGS_ON_IMPORT", False):
+            from apps.search.embeddings import rebuild_embeddings_for_books
+
+            rebuild_embeddings_for_books(book_ids)
+        if getattr(settings, "CLAVIS_ENRICH_ON_IMPORT", False):
+            from apps.catalog.enrichment import (
+                collect_proposals,
+                get_provider,
+                persist_proposals,
+            )
+
+            provider = get_provider("dry-run")
+            persist_proposals(
+                collect_proposals(provider, snapshot=snapshot, book_ids=book_ids)
+            )
         refresh_excerpt_flags()
 
         SourceSnapshot.objects.filter(is_current=True).update(is_current=False)

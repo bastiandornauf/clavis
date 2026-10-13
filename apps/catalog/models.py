@@ -15,9 +15,15 @@ class CatalogEntry(models.Model):
         FLAW = "flaw", "Flaw"
         STORY_SEED = "story_seed", "Story seed"
         CREATURE = "creature", "Creature"
+        BEAST = "beast", "Beast"
         CHARACTER = "character", "Character"
         GUIDELINE = "guideline", "Guideline"
         ABILITY = "ability", "Ability"
+        BOON = "boon", "Boon"
+        HOOK = "hook", "Hook"
+        ORGANIZATION = "organization", "Organization"
+        PLACE = "place", "Place"
+        ITEM = "item", "Item"
 
     class Kind(models.TextChoices):
         DEFINITION = "definition", "Definition"
@@ -68,3 +74,53 @@ class CatalogEntry(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_entry_type_display()}: {self.name}"
+
+
+class EnrichmentProposal(models.Model):
+    """Reviewable leftover suggestions (heuristic dry-run or optional LLM)."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        ACCEPTED = "accepted", "Accepted"
+        REJECTED = "rejected", "Rejected"
+        SKIPPED = "skipped", "Skipped"
+
+    snapshot = models.ForeignKey(
+        SourceSnapshot,
+        on_delete=models.CASCADE,
+        related_name="enrichment_proposals",
+    )
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="enrichment_proposals")
+    section_stable_id = models.CharField(max_length=64, db_index=True)
+    section_path = models.CharField(max_length=1024)
+    proposed_entry_type = models.CharField(max_length=16, blank=True)
+    proposed_name = models.CharField(max_length=512)
+    proposed_summary = models.CharField(max_length=512, blank=True)
+    evidence = models.TextField(blank=True)
+    confidence = models.FloatField(default=0.0)
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    extractor = models.CharField(max_length=64, default="llm")
+    provider = models.CharField(max_length=64, default="dry-run")
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["snapshot", "section_stable_id", "proposed_name", "provider"],
+                name="enrichment_proposal_unique_hint",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["snapshot", "status"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.proposed_name} ({self.status})"

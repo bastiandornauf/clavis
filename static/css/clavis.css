@@ -1245,6 +1245,15 @@ button.secondary:hover,
   background: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg-elevated));
 }
 
+.lexicon-intro {
+  font-family: var(--font-ui);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--color-ink-muted);
+  max-width: 40rem;
+  margin: 0 0 var(--space-5);
+}
+
 .lexicon-tools {
   margin: var(--space-5) 0 0;
   font-family: var(--font-ui);

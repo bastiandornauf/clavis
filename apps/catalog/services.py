@@ -100,18 +100,31 @@ def coverage_by_book(*, reviewed_only: bool = False) -> list[dict[str, object]]:
         }
         section_count = book.sections.count()
         catalog_total = sum(typed.values())
+        virtue_flaw = typed.get("virtue", 0) + typed.get("flaw", 0)
+        boon_hook = typed.get("boon", 0) + typed.get("hook", 0)
+        accounted = (
+            typed.get("spell", 0)
+            + virtue_flaw
+            + typed.get("creature", 0)
+            + typed.get("beast", 0)
+            + boon_hook
+            + typed.get("organization", 0)
+            + typed.get("place", 0)
+            + typed.get("item", 0)
+        )
         rows.append(
             {
                 "book": book,
                 "section_count": section_count,
                 "spell": typed.get("spell", 0),
-                "virtue": typed.get("virtue", 0),
-                "flaw": typed.get("flaw", 0),
-                "story_seed": typed.get("story_seed", 0),
+                "virtue_flaw": virtue_flaw,
                 "creature": typed.get("creature", 0),
-                "character": typed.get("character", 0),
-                "guideline": typed.get("guideline", 0),
-                "ability": typed.get("ability", 0),
+                "beast": typed.get("beast", 0),
+                "boon_hook": boon_hook,
+                "organization": typed.get("organization", 0),
+                "place": typed.get("place", 0),
+                "item": typed.get("item", 0),
+                "other": max(catalog_total - accounted, 0),
                 "catalog_total": catalog_total,
                 "density": (catalog_total / section_count) if section_count else 0.0,
             }

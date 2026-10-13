@@ -15,6 +15,22 @@ SPELL_PARAMS_RE = re.compile(
     r"^R:\s*(?P<range>[^,;\n]+?),\s*D:\s*(?P<duration>[^,;\n]+?),\s*T:\s*(?P<target>[^,<\n]+)",
     re.I | re.M,
 )
+# Blockquote / bold-label writeups: ``**R:** Eye, **D:** Sun, **T:** Ind, **Level 25**``
+SPELL_PARAMS_BOLD_RE = re.compile(
+    r"^(?:>\s*)?\*\*R:\*\*\s*(?P<range>[^,;\n]+?),\s*"
+    r"\*\*D:\*\*\s*(?P<duration>[^,;\n]+?),\s*"
+    r"\*\*T:\*\*\s*(?P<target>[^,;\n*]+)"
+    r"(?:,\s*\*\*Level\s+(?P<level>\d+)\*\*)?",
+    re.I | re.M,
+)
+# Callout spell name: ``>**MY NEW BEST FRIEND**`` or ``> #### Title`` then bold name.
+BQ_SPELL_NAME_RE = re.compile(
+    r"^(?:>\s*)?(?:#{2,6}\s+(?P<head_tech>Creo|Intellego|Muto|Perdo|Rego)\s+"
+    r"(?P<head_form>Animal|Aquam|Auram|Corpus|Herbam|Ignem|Imaginem|Mentem|Terram|Vim)"
+    r"\s+Spells?\s*$|\*\*(?P<name>[^*]{3,80})\*\*\s*$)",
+    re.I | re.M,
+)
+SPELL_BLOCK_WINDOW = 1200
 TECHNIQUE_FORM_RE = re.compile(
     r"\b(?P<tech>Creo|Intellego|Muto|Perdo|Rego)\s+"
     r"(?P<form>Animal|Aquam|Auram|Corpus|Herbam|Ignem|Imaginem|Mentem|Terram|Vim)\b",
@@ -77,9 +93,10 @@ CREATURE_LEAD_RE = re.compile(
 
 # Allow optional blockquote markers and bold wrappers around the label/colon
 # (Contested Isle callouts use ``> **Faerie Might:** 50``).
+# Colon may sit inside or outside bold: ``**Faerie Might:** 20`` or ``**Magic Might**: 20``.
 MIGHT_LINE_RE = re.compile(
-    r"^(?:>\s*)?(?:\*\*)?(?P<realm>Magic|Faerie|Infernal|Divine)\s+Might:"
-    r"(?:\*\*)?\s*"
+    r"^(?:>\s*)?(?:\*\*)?(?P<realm>Magic|Faerie|Infernal|Divine)\s+Might"
+    r"(?:\*\*)?\s*:(?:\*\*)?\s*"
     r"(?P<might>\d+)\s*(?:\((?P<form>[^)]+)\))?",
     re.I | re.M,
 )
@@ -263,6 +280,45 @@ def _parent_technique_form(section: Section) -> tuple[str, str]:
     return "", ""
 
 
+def _spell_entry(
+    *,
+    section: Section,
+    name: str,
+    params: re.Match[str],
+    technique: str = "",
+    form: str = "",
+    level: int | None = None,
+) -> ExtractedEntry:
+    if level is None and params.groupdict().get("level"):
+        level = int(params.group("level"))
+    summary_bits: list[str] = []
+    if technique and form:
+        summary_bits.append(f"{technique} {form}")
+    if level is not None:
+        summary_bits.append(f"Level {level}")
+    summary_bits.extend(
+        [
+            f"R: {params.group('range').strip()}",
+            f"D: {params.group('duration').strip()}",
+            f"T: {params.group('target').strip()}",
+        ]
+    )
+    return ExtractedEntry(
+        entry_type="spell",
+        name=name,
+        slug=slugify(name)[:200] or "spell",
+        summary="; ".join(summary_bits),
+        section=section,
+        technique=technique,
+        form=form,
+        level=level,
+        range=params.group("range").strip(),
+        duration=params.group("duration").strip(),
+        target=params.group("target").strip(),
+        evidence=params.group(0).strip()[:240],
+    )
+
+
 def extract_spell(section: Section) -> ExtractedEntry | None:
     body = _clean_body(section.body_markdown)
     if CREATURE_LEAD_RE.search(body[:CREATURE_LEAD_WINDOW]):
@@ -273,6 +329,8 @@ def extract_spell(section: Section) -> ExtractedEntry | None:
         return None
 
     head = body[:SPELL_PARAM_WINDOW]
+    # Classic section-as-spell only (plain R:/D:/T:). Bold callouts are harvested
+    # separately so narrative sections like "Magi" are not mislabeled as spells.
     params = SPELL_PARAMS_RE.search(head)
     if not params:
         return None
@@ -293,33 +351,75 @@ def extract_spell(section: Section) -> ExtractedEntry | None:
         if not params.start() <= 40:
             return None
 
-    summary_bits: list[str] = []
-    if technique and form:
-        summary_bits.append(f"{technique} {form}")
-    if level is not None:
-        summary_bits.append(f"Level {level}")
-    summary_bits.extend(
-        [
-            f"R: {params.group('range').strip()}",
-            f"D: {params.group('duration').strip()}",
-            f"T: {params.group('target').strip()}",
-        ]
-    )
-
-    return ExtractedEntry(
-        entry_type="spell",
-        name=_section_title(section),
-        slug=slugify(_section_title(section))[:200] or "spell",
-        summary="; ".join(summary_bits),
+    return _spell_entry(
         section=section,
+        name=_section_title(section),
+        params=params,
         technique=technique,
         form=form,
         level=level,
-        range=params.group("range").strip(),
-        duration=params.group("duration").strip(),
-        target=params.group("target").strip(),
-        evidence=params.group(0),
     )
+
+
+def extract_blockquote_spells(section: Section) -> list[ExtractedEntry]:
+    """Harvest spell callouts embedded in narrative sections (e.g. Rhine Magi)."""
+    body = _clean_body(section.body_markdown)
+    if not SPELL_PARAMS_BOLD_RE.search(body):
+        return []
+
+    found: list[ExtractedEntry] = []
+    seen: set[str] = set()
+    for params in SPELL_PARAMS_BOLD_RE.finditer(body):
+        window_start = max(0, params.start() - 240)
+        prefix = body[window_start : params.start()]
+        name = ""
+        technique = ""
+        form = ""
+        for match in BQ_SPELL_NAME_RE.finditer(prefix):
+            if match.group("name"):
+                candidate = unescape_markdown_text(match.group("name")).strip()
+                if re.match(
+                    r"^(R|D|T|Level|Requisite|Range|Duration|Target)\b",
+                    candidate,
+                    re.I,
+                ):
+                    continue
+                name = candidate
+            if match.group("head_tech"):
+                technique = match.group("head_tech").title()
+                form = match.group("head_form").title()
+        if not name:
+            continue
+        key = name.casefold()
+        if key in seen:
+            continue
+        head_chunk = prefix[-200:] + body[params.start() : params.start() + 200]
+        tf = TECHNIQUE_FORM_RE.search(head_chunk)
+        if tf:
+            technique = technique or tf.group("tech").title()
+            form = form or tf.group("form").title()
+        seen.add(key)
+        found.append(
+            _spell_entry(
+                section=section,
+                name=name,
+                params=params,
+                technique=technique,
+                form=form,
+            )
+        )
+    return found
+
+
+def extract_spells(section: Section) -> list[ExtractedEntry]:
+    boxed = extract_blockquote_spells(section)
+    primary = extract_spell(section)
+    if primary is None:
+        return boxed
+    names = {entry.name.casefold() for entry in boxed}
+    if primary.name.casefold() not in names:
+        return [primary, *boxed]
+    return boxed
 
 
 def _vf_entry(
@@ -558,7 +658,8 @@ def extract_creature(section: Section) -> ExtractedEntry | None:
     title = _section_title(section)
     if SKIP_TITLE_RE.match(title):
         return None
-    if section.level < 2:
+    # Top-level (level 1) creature chapters are common in adventure books.
+    if section.level < 1:
         return None
 
     body = _clean_body(section.body_markdown)
@@ -833,6 +934,16 @@ def extract_ability(section: Section) -> ExtractedEntry | None:
 
 
 def extract_from_section(section: Section) -> list[ExtractedEntry]:
+    # Imported here to keep saga patterns in a dedicated module without cycles
+    # at import time for the helpers above.
+    from apps.catalog.saga_extractors import (
+        extract_beast,
+        extract_boons_and_hooks,
+        extract_item,
+        extract_organization,
+        extract_place,
+    )
+
     seeds = extract_story_seeds(section)
     title_is_seed = bool(STORY_SEED_TITLE_RE.match(_section_title(section)))
     if title_is_seed:
@@ -842,19 +953,47 @@ def extract_from_section(section: Section) -> list[ExtractedEntry]:
     if guidelines:
         return guidelines
 
-    spell = extract_spell(section)
-    if spell:
-        return [spell]
+    # Dedicated spell sections win exclusively; callout spells merge with other types.
+    primary_spell = extract_spell(section)
+    boxed_spells = extract_blockquote_spells(section)
+    if primary_spell is not None:
+        return extract_spells(section)
+
     vf = extract_virtues_and_flaws(section)
     if vf:
         return vf
+
+    boons_hooks = extract_boons_and_hooks(section)
+    if boons_hooks:
+        return [*boons_hooks, *seeds]
+
     creatures = extract_creatures(section)
     if creatures:
-        return [*creatures, *seeds]
+        return [*creatures, *boxed_spells, *seeds]
+
+    beast = extract_beast(section)
+    if beast:
+        return [beast, *boxed_spells, *seeds]
+
     characters = extract_characters(section)
     if characters:
-        return [*characters, *seeds]
+        return [*characters, *boxed_spells, *seeds]
+
+    organization = extract_organization(section)
+    if organization:
+        return [organization, *boxed_spells, *seeds]
+
+    place = extract_place(section)
+    if place:
+        return [place, *boxed_spells, *seeds]
+
+    item = extract_item(section)
+    if item:
+        return [item, *boxed_spells, *seeds]
+
     ability = extract_ability(section)
     if ability:
-        return [ability, *seeds]
+        return [ability, *boxed_spells, *seeds]
+    if boxed_spells:
+        return [*boxed_spells, *seeds]
     return seeds

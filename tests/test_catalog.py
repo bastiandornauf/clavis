@@ -162,6 +162,66 @@ def test_character_house_from_section_title(tmp_path: Path):
 
 
 @pytest.mark.django_db
+def test_creature_extractor_accepts_level_one_and_bold_before_colon(tmp_path: Path):
+    """Adventure books often use H1 creature chapters and ``**Magic Might**:``."""
+    from apps.catalog.extractors import extract_creatures
+    from apps.library.models import Book, Section
+    from apps.sources.models import SourceSnapshot
+
+    snap = SourceSnapshot.objects.create(
+        repo_url="file://fixture",
+        commit_sha="creatures",
+        local_path=str(tmp_path),
+        status=SourceSnapshot.Status.READY,
+        is_current=True,
+    )
+    book = Book.objects.create(
+        snapshot=snap,
+        slug="calebais",
+        title="Calebais",
+        relative_path="reviewed/c.md",
+    )
+    satyrs = Section.objects.create(
+        book=book,
+        level=1,
+        title="Satyrs",
+        slug="satyrs",
+        path="satyrs",
+        body_markdown=(
+            "**Faerie Might:** 22 (Corpus)\n\n"
+            "**Characteristics:** Int -1, Per 0\n\n"
+            "**Size:** +1\n"
+        ),
+        content_hash="satyrs",
+        stable_id="satyrs-test",
+        position=0,
+    )
+    undertakers = Section.objects.create(
+        book=book,
+        level=1,
+        title="The Undertakers",
+        slug="undertakers",
+        path="undertakers",
+        body_markdown=(
+            "**Magic Might**: 20 (Terram)\n\n"
+            "**Characteristics:** Int -5, Per -2\n\n"
+            "**Size:** +2\n"
+        ),
+        content_hash="undertakers",
+        stable_id="undertakers-test",
+        position=1,
+    )
+    satyr_hits = extract_creatures(satyrs)
+    assert len(satyr_hits) == 1
+    assert satyr_hits[0].level == 22
+    assert satyr_hits[0].category == "Faerie"
+    undertaker_hits = extract_creatures(undertakers)
+    assert len(undertaker_hits) == 1
+    assert undertaker_hits[0].level == 20
+    assert undertaker_hits[0].form == "Terram"
+
+
+@pytest.mark.django_db
 def test_contents_section_does_not_harvest_story_seed_index(tmp_path: Path):
     """TOC pages list seed titles; those must not become catalog entries."""
     from apps.catalog.extractors import extract_story_seeds

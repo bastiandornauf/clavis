@@ -9,9 +9,15 @@
     <a href="{% url 'catalog:list' 'flaw' %}" {% if entry_type == 'flaw' %}aria-current="page"{% endif %}>Flaws ({{ counts.flaw|default:0 }})</a>
     <a href="{% url 'catalog:list' 'story_seed' %}" {% if entry_type == 'story_seed' %}aria-current="page"{% endif %}>Story seeds ({{ counts.story_seed|default:0 }})</a>
     <a href="{% url 'catalog:list' 'creature' %}" {% if entry_type == 'creature' %}aria-current="page"{% endif %}>Creatures ({{ counts.creature|default:0 }})</a>
+    <a href="{% url 'catalog:list' 'beast' %}" {% if entry_type == 'beast' %}aria-current="page"{% endif %}>Beasts ({{ counts.beast|default:0 }})</a>
     <a href="{% url 'catalog:list' 'character' %}" {% if entry_type == 'character' %}aria-current="page"{% endif %}>Characters ({{ counts.character|default:0 }})</a>
     <a href="{% url 'catalog:list' 'guideline' %}" {% if entry_type == 'guideline' %}aria-current="page"{% endif %}>Guidelines ({{ counts.guideline|default:0 }})</a>
     <a href="{% url 'catalog:list' 'ability' %}" {% if entry_type == 'ability' %}aria-current="page"{% endif %}>Abilities ({{ counts.ability|default:0 }})</a>
+    <a href="{% url 'catalog:list' 'boon' %}" {% if entry_type == 'boon' %}aria-current="page"{% endif %}>Boons ({{ counts.boon|default:0 }})</a>
+    <a href="{% url 'catalog:list' 'hook' %}" {% if entry_type == 'hook' %}aria-current="page"{% endif %}>Hooks ({{ counts.hook|default:0 }})</a>
+    <a href="{% url 'catalog:list' 'organization' %}" {% if entry_type == 'organization' %}aria-current="page"{% endif %}>Orgs ({{ counts.organization|default:0 }})</a>
+    <a href="{% url 'catalog:list' 'place' %}" {% if entry_type == 'place' %}aria-current="page"{% endif %}>Places ({{ counts.place|default:0 }})</a>
+    <a href="{% url 'catalog:list' 'item' %}" {% if entry_type == 'item' %}aria-current="page"{% endif %}>Items ({{ counts.item|default:0 }})</a>
   </nav>
 
   <form class="filter-bar" method="get">
@@ -97,6 +103,24 @@
           <option value="Martial" {% if selected_category == 'Martial' %}selected{% endif %}>Martial</option>
           <option value="Supernatural" {% if selected_category == 'Supernatural' %}selected{% endif %}>Supernatural</option>
         </select>
+      </label>
+    {% elif entry_type == 'boon' or entry_type == 'hook' %}
+      <label>
+        Magnitude
+        <select name="magnitude">
+          <option value="">All</option>
+          <option value="Major" {% if selected_magnitude == 'Major' %}selected{% endif %}>Major</option>
+          <option value="Minor" {% if selected_magnitude == 'Minor' %}selected{% endif %}>Minor</option>
+        </select>
+      </label>
+      <label>
+        Category
+        <input type="text" name="category" value="{{ selected_category }}" placeholder="Site">
+      </label>
+    {% elif entry_type == 'organization' or entry_type == 'place' or entry_type == 'beast' %}
+      <label>
+        Category
+        <input type="text" name="category" value="{{ selected_category }}" placeholder="House / Covenant">
       </label>
     {% endif %}
     <label>

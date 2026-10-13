@@ -7,28 +7,34 @@
     Totals: {{ counts.spell|default:0 }} spells,
     {{ counts.virtue|default:0 }} virtues,
     {{ counts.flaw|default:0 }} flaws,
-    {{ counts.story_seed|default:0 }} story seeds,
+    {{ counts.story_seed|default:0 }} seeds,
     {{ counts.creature|default:0 }} creatures,
+    {{ counts.beast|default:0 }} beasts,
     {{ counts.character|default:0 }} characters,
     {{ counts.guideline|default:0 }} guidelines,
-    {{ counts.ability|default:0 }} abilities.
+    {{ counts.ability|default:0 }} abilities,
+    {{ counts.boon|default:0 }} boons,
+    {{ counts.hook|default:0 }} hooks,
+    {{ counts.organization|default:0 }} orgs,
+    {{ counts.place|default:0 }} places,
+    {{ counts.item|default:0 }} items.
   </p>
 
   <table class="coverage-table">
     <thead>
       <tr>
         <th scope="col">Book</th>
-        <th scope="col">Edition</th>
         <th scope="col">Status</th>
-        <th scope="col">Spells</th>
-        <th scope="col">Virtues</th>
-        <th scope="col">Flaws</th>
-        <th scope="col">Seeds</th>
-        <th scope="col">Creatures</th>
-        <th scope="col">Characters</th>
-        <th scope="col">Guidelines</th>
-        <th scope="col">Abilities</th>
-        <th scope="col">Catalogued</th>
+        <th scope="col">Spell</th>
+        <th scope="col">VF</th>
+        <th scope="col">Creature</th>
+        <th scope="col">Beast</th>
+        <th scope="col">Boon/Hook</th>
+        <th scope="col">Org</th>
+        <th scope="col">Place</th>
+        <th scope="col">Item</th>
+        <th scope="col">Other</th>
+        <th scope="col">Total</th>
         <th scope="col">Sections</th>
         <th scope="col">Density</th>
       </tr>
@@ -44,16 +50,16 @@
               <span class="badge">thin</span>
             {% endif %}
           </td>
-          <td>{{ row.book.get_edition_display }}</td>
           <td>{{ row.book.get_review_status_display }}</td>
           <td>{{ row.spell }}</td>
-          <td>{{ row.virtue }}</td>
-          <td>{{ row.flaw }}</td>
-          <td>{{ row.story_seed }}</td>
+          <td>{{ row.virtue_flaw }}</td>
           <td>{{ row.creature }}</td>
-          <td>{{ row.character }}</td>
-          <td>{{ row.guideline }}</td>
-          <td>{{ row.ability }}</td>
+          <td>{{ row.beast }}</td>
+          <td>{{ row.boon_hook }}</td>
+          <td>{{ row.organization }}</td>
+          <td>{{ row.place }}</td>
+          <td>{{ row.item }}</td>
+          <td>{{ row.other }}</td>
           <td>{{ row.catalog_total }}</td>
           <td>{{ row.section_count }}</td>
           <td>{{ row.density|floatformat:3 }}</td>

@@ -259,10 +259,10 @@ A task is done when:
 | Markdown | Only `clavis.markdown` |
 | Citations | Only `clavis.citations` + shared citation template |
 
-## Deferred features (do not implement casually)
+## AI features (keep optional)
 
-The rule-based catalog (spells / virtues / flaws) is in progress under
-`apps.catalog`. Unless a task explicitly asks for them: LLM enrichment,
-generative chat/RAG, and semantic/embedding search. Boundaries should stay
-ready for them; code for them should not land early “just in case.”
+Enrichment + local semantic/hybrid search scaffolds live under `apps.catalog`
+and `apps.search`. Do **not** add generative chat/RAG, remote LLM calls, or a
+second citation/Markdown stack unless explicitly asked. Enrichment must stay
+reviewable; the app must run fully offline without API keys.
 
