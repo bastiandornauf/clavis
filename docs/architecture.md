@@ -8,7 +8,7 @@ into a readable, searchable library with personal campaign overlays.
 | Module | Responsibility |
 |---|---|
 | `apps.sources` | Git sync, source snapshots, import orchestration, DB backup |
-| `apps.library` | Books and sections, Markdown structural parse, stable IDs, released-image gallery |
+| `apps.library` | Books and sections, Markdown structural parse, stable IDs, released-image gallery, curated Guides links |
 | `apps.reader` | TOC, section rendering, navigation |
 | `apps.search` | SQLite FTS5 index and query UI |
 | `apps.annotations` | Bookmarks, notes, last-read position (lists live under Workspace) |
@@ -23,6 +23,10 @@ Shared library code lives under `src/clavis/`:
 The Library **Gallery** browses `released-images/` from the Open License checkout.
 PNG/JPEG serve directly; TIFF/TIF are converted to cached PNG previews under
 `data/cache/released-images/` (Pillow).
+
+**Guides** (`/guides/`) is a curated external-link shelf driven by
+`apps/library/guides.json`. It is not imported into the corpus, FTS, or Lexicon—
+Library remains primary Open License sources only.
 
 A session preference **Reviewed only** (header toggle) limits Library, Search, and
 Lexicon lists/counts to `review_status=reviewed`. Direct URLs to WIP sections

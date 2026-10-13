@@ -15,6 +15,7 @@ from apps.library.gallery import (
     released_images_root,
     resolve_gallery_file,
 )
+from apps.library.guides import load_guides_catalog
 from apps.library.models import Book
 from apps.library.preferences import apply_reviewed_only, get_reviewed_only, set_reviewed_only
 from apps.sources.models import SourceSnapshot
@@ -83,6 +84,19 @@ def gallery_index(request: HttpRequest) -> HttpResponse:
             "image_count": image_count,
             "has_images": bool(albums),
             "page_title": "Gallery",
+        },
+    )
+
+
+def guides_index(request: HttpRequest) -> HttpResponse:
+    catalog = load_guides_catalog()
+    return render(
+        request,
+        "library/guides.html",
+        {
+            "intro": catalog.intro,
+            "categories": catalog.categories,
+            "page_title": "Guides",
         },
     )
 

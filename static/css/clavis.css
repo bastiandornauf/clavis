@@ -1173,6 +1173,57 @@ button.secondary:hover,
   line-height: 1.3;
 }
 
+.guides-stack {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.guides-category h2 {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+
+.guides-category__desc {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  color: var(--color-ink-muted);
+  max-width: 42rem;
+}
+
+.guides-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.guides-list li {
+  padding: 0 0 var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.guides-list li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.guides-list a {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.guides-list p {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  color: var(--color-ink-muted);
+  max-width: 42rem;
+}
+
 .warning {
   color: var(--color-danger);
   font-family: var(--font-ui);

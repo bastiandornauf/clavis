@@ -22,6 +22,7 @@
           <a href="{% url 'library:index' %}" {% if request.resolver_match.app_name == 'reader' or request.resolver_match.app_name == 'library' and request.resolver_match.url_name == 'index' %}aria-current="page"{% endif %}>Library</a>
           <a href="{% url 'catalog:index' %}" {% if request.resolver_match.app_name == 'catalog' %}aria-current="page"{% endif %}>Lexicon</a>
           <a href="{% url 'library:gallery' %}" {% if request.resolver_match.app_name == 'library' and request.resolver_match.url_name == 'gallery' or request.resolver_match.app_name == 'library' and request.resolver_match.url_name == 'gallery_file' %}aria-current="page"{% endif %}>Gallery</a>
+          <a href="{% url 'library:guides' %}" {% if request.resolver_match.app_name == 'library' and request.resolver_match.url_name == 'guides' %}aria-current="page"{% endif %}>Guides</a>
         </div>
         <div class="nav-group" role="group" aria-label="Prepare">
           <a href="{% url 'campaigns:workspace' %}" {% if request.resolver_match.app_name == 'campaigns' or request.resolver_match.app_name == 'annotations' %}aria-current="page"{% endif %}>Workspace</a>

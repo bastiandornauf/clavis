@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <header class="page-header">
+    <h1 class="page-title">Guides</h1>
+    {% if intro %}
+      <p class="lede">{{ intro }}</p>
+    {% endif %}
+  </header>
+
+  {% if not categories %}
+    <p class="empty-state">No guides are configured yet.</p>
+  {% else %}
+    <div class="guides-stack">
+      {% for category in categories %}
+        <section class="guides-category" id="guides-{{ category.id }}">
+          <h2>{{ category.title }}</h2>
+          {% if category.description %}
+            <p class="guides-category__desc">{{ category.description }}</p>
+          {% endif %}
+          <ul class="guides-list">
+            {% for item in category.items %}
+              <li>
+                <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.title }}</a>
+                {% if item.summary %}
+                  <p>{{ item.summary }}</p>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endblock %}

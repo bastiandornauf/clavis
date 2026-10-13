@@ -74,5 +74,6 @@ compose those tokens rather than inventing one-off values.
 | Empty / warning | `.empty-state`, `.warning` |
 | Book / lexicon grids | `.book-grid`, `.book-card` (subgrid-aligned) |
 | Gallery grid | `.gallery-jump`, `.gallery-album`, `.gallery-grid` |
+| Guides list | `.guides-stack`, `.guides-category`, `.guides-list` |
 
 Accessibility target: WCAG 2.2 AA.
