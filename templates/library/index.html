@@ -20,18 +20,19 @@
           {% endfor %}
         </select>
       </label>
-      <label>
-        Status
-        <select name="status">
-          <option value="">All</option>
-          {% for value, label in status_choices %}
-            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </label>
+      {% if not reviewed_only %}
+        <label>
+          Status
+          <select name="status">
+            <option value="">All</option>
+            {% for value, label in status_choices %}
+              <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% endif %}
       <button type="submit">Filter</button>
     </form>
-
     <p class="filter-count" aria-live="polite">
       {% if book_count == 0 %}
         0 books
@@ -39,7 +40,7 @@
         1 book
       {% else %}
         {{ book_count }} books
-      {% endif %}
+      {% endif %}{% if reviewed_only %} (reviewed only){% endif %}
     </p>
 
     {% if books %}

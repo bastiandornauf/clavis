@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from django.contrib import messages
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods, require_POST
 
-from apps.annotations.models import Bookmark, Note
 from apps.annotations.services import toggle_bookmark, upsert_note
 from apps.library.models import Section
 from apps.sources.models import SourceSnapshot
@@ -50,18 +50,8 @@ def note_save(request: HttpRequest) -> HttpResponse:
 
 
 def bookmark_list(request: HttpRequest) -> HttpResponse:
-    bookmarks = Bookmark.objects.all()
-    return render(
-        request,
-        "annotations/bookmarks.html",
-        {"bookmarks": bookmarks, "page_title": "Bookmarks"},
-    )
+    return redirect(f"{reverse('campaigns:workspace')}?tab=bookmarks")
 
 
 def note_list(request: HttpRequest) -> HttpResponse:
-    notes = Note.objects.all()
-    return render(
-        request,
-        "annotations/notes.html",
-        {"notes": notes, "page_title": "Notes"},
-    )
+    return redirect(f"{reverse('campaigns:workspace')}?tab=notes")

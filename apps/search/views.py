@@ -7,6 +7,7 @@ from django.shortcuts import render
 from django.utils.http import urlencode
 
 from apps.library.models import Book
+from apps.library.preferences import apply_reviewed_only, get_reviewed_only
 from apps.library.services import citation_parts
 from apps.search.services import search_sections
 from apps.sources.models import SourceSnapshot
@@ -18,6 +19,8 @@ def search_page(request: HttpRequest) -> HttpResponse:
     edition = request.GET.get("edition", "").strip()
     book_slug = request.GET.get("book", "").strip()
     status = request.GET.get("status", "").strip()
+    only = get_reviewed_only(request)
+    effective_status = Book.ReviewStatus.REVIEWED if only else status
 
     hits = []
     if query:
@@ -25,7 +28,7 @@ def search_page(request: HttpRequest) -> HttpResponse:
             query,
             edition=edition,
             book_slug=book_slug,
-            review_status=status,
+            review_status=effective_status,
         )
         for hit in raw_hits:
             citation = Citation(**citation_parts(hit.section))
@@ -39,7 +42,10 @@ def search_page(request: HttpRequest) -> HttpResponse:
 
     current = SourceSnapshot.current()
     if current:
-        books = Book.objects.filter(snapshot=current).order_by("title")
+        books = apply_reviewed_only(
+            Book.objects.filter(snapshot=current).order_by("title"),
+            request,
+        )
     else:
         books = Book.objects.none()
 
@@ -49,7 +55,7 @@ def search_page(request: HttpRequest) -> HttpResponse:
             "q": query,
             "edition": edition,
             "book": book_slug,
-            "status": status,
+            "status": "" if only else status,
         }.items()
         if v
     }
@@ -63,7 +69,7 @@ def search_page(request: HttpRequest) -> HttpResponse:
             "books": books,
             "selected_edition": edition,
             "selected_book": book_slug,
-            "selected_status": status,
+            "selected_status": effective_status if only else status,
             "edition_choices": Book.Edition.choices,
             "status_choices": Book.ReviewStatus.choices,
             "return_query": urlencode(filter_params),

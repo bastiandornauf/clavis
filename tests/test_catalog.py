@@ -61,6 +61,12 @@ def test_rules_extract_spells_virtues_flaws(fixture_markdown_dir: Path):
     assert delayed.form == "Herbam"
     assert delayed.category == "Magic"
 
+    # Blockquote callout with ``**Faerie Might:**`` (Contested Isle–style).
+    donn = CatalogEntry.objects.get(entry_type="creature", name="Donn")
+    assert donn.level == 50
+    assert donn.category == "Faerie"
+    assert donn.form == "Corpus"
+
     character = CatalogEntry.objects.get(entry_type="character", name__icontains="Daria La Gris")
     assert "Daria La Gris" in character.name
     assert character.category == "Tremere"

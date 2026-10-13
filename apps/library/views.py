@@ -6,7 +6,8 @@ from pathlib import Path
 
 from django.db.models import Count, QuerySet
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from apps.library.gallery import (
     list_gallery_albums,
@@ -15,6 +16,7 @@ from apps.library.gallery import (
     resolve_gallery_file,
 )
 from apps.library.models import Book
+from apps.library.preferences import apply_reviewed_only, get_reviewed_only, set_reviewed_only
 from apps.sources.models import SourceSnapshot
 
 
@@ -31,9 +33,24 @@ def _filtered_books(request: HttpRequest) -> QuerySet[Book]:
     status = request.GET.get("status", "").strip()
     if edition:
         books = books.filter(edition=edition)
-    if status:
+    books = apply_reviewed_only(books, request)
+    if not get_reviewed_only(request) and status:
         books = books.filter(review_status=status)
     return books
+
+
+def toggle_reviewed_only(request: HttpRequest) -> HttpResponse:
+    """Persist the global reviewed-only preference and return to the previous page."""
+    if request.method == "POST":
+        set_reviewed_only(request, request.POST.get("reviewed_only") == "1")
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "/"
+    if not url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        next_url = "/"
+    return redirect(next_url)
 
 
 def library_index(request: HttpRequest) -> HttpResponse:

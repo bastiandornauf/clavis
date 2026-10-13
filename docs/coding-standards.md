@@ -25,6 +25,7 @@ We adopt proven guidelines and only add Clavis-specific rules on top:
 | [Architecture Decision Records](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) | Short records of important technical choices |
 | [WCAG 2.2](https://www.w3.org/TR/WCAG22/) Level AA | Keyboard use, contrast, focus, understandable forms |
 | [GOV.UK Design System](https://design-system.service.gov.uk/components/) approach | Documented, reusable UI components with clear usage rules |
+| [Kevin Powell — smart / breakpoint-free layouts](https://www.kevinpowell.co/talks/smart-layout-patterns/) | Intrinsic CSS: container queries, auto-fit grids, `clamp()`, subgrid, cascade layers — as implementation references only |
 
 Two standing principles:
 
@@ -157,6 +158,17 @@ inline one-offs.
 States — selected, disabled, loading, empty, error — are styled consistently.
 Meaning is never conveyed by color alone.
 
+Prefer **intrinsic layouts** and reusable, container-responsive components.
+Write a component once and let it adapt to available width (container queries,
+`auto-fit` / `auto-fill` grids, `min`/`max`/`clamp`) instead of maintaining
+per-page layout variants. Use Kevin Powell’s examples as implementation
+references; verify browser support and accessibility before adopting a
+technique. Cascade layers (`tokens` → `reset` → `base` → `layout` →
+`components` → `utilities`) keep override priority predictable.
+
+Tokens, shared components, and WCAG obligations remain authoritative over any
+external example.
+
 See [design-system.md](design-system.md).
 
 ## 9. Write semantic, accessible HTML
@@ -173,10 +185,13 @@ Target: WCAG 2.2 Level AA.
 
 ## 10. Prioritize readability over decorative design
 
-Book text gets a comfortable measure, clear typography, and enough spacing.
-Wide tables may scroll horizontally in a controlled way.
+Book text gets a comfortable measure (`clamp` / `min` against `--content-width`),
+clear typography, and enough spacing. Wide tables may scroll horizontally in a
+controlled way.
 
 Check desktop and tablet; small screens must still reach content and navigation.
+Prefer container-based adaptation so the same reader/result components remain
+usable in narrower chrome without a separate “mobile stylesheet.”
 
 Research comfort matters: reading position, search filters, and open context
 should survive appropriate navigation steps.

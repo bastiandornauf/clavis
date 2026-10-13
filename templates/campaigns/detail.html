@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+  {% include "components/breadcrumbs.html" with breadcrumbs=breadcrumbs %}
   <h1 class="page-title">{{ campaign.name }}</h1>
   {% if campaign.description %}
     <p class="lede">{{ campaign.description }}</p>

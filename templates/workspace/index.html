@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="page-title">Workspace</h1>
+  <p class="lede">Bookmarks, notes, and campaigns for session prep.</p>
+
+  <nav class="subnav" aria-label="Workspace sections">
+    <a href="{% url 'campaigns:workspace' %}?tab=campaigns" {% if tab == 'campaigns' %}aria-current="page"{% endif %}>Campaigns</a>
+    <a href="{% url 'campaigns:workspace' %}?tab=bookmarks" {% if tab == 'bookmarks' %}aria-current="page"{% endif %}>Bookmarks</a>
+    <a href="{% url 'campaigns:workspace' %}?tab=notes" {% if tab == 'notes' %}aria-current="page"{% endif %}>Notes</a>
+  </nav>
+
+  {% if tab == 'campaigns' %}
+    <p><a class="button" href="{% url 'campaigns:create' %}">New campaign</a></p>
+    {% if campaigns %}
+      <ul class="result-list">
+        {% for campaign in campaigns %}
+          <li>
+            <h2><a href="{% url 'campaigns:detail' campaign.slug %}">{{ campaign.name }}</a></h2>
+            <p class="meta">{{ campaign.items.count }} item{{ campaign.items.count|pluralize }} · updated {{ campaign.updated_at }}</p>
+            {% if campaign.description %}<p>{{ campaign.description }}</p>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-state">No campaigns yet.</div>
+    {% endif %}
+  {% elif tab == 'bookmarks' %}
+    {% if bookmarks %}
+      <ul class="result-list">
+        {% for bookmark in bookmarks %}
+          <li>
+            <h2>
+              <a href="{% url 'reader:section' bookmark.book_slug bookmark.section_path %}">
+                {{ bookmark.title }}
+              </a>
+            </h2>
+            <p class="citation">{{ bookmark.book_slug }} → {{ bookmark.section_path }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-state">No bookmarks yet. Open a section in the reader to add one.</div>
+    {% endif %}
+  {% else %}
+    {% if notes %}
+      <ul class="result-list">
+        {% for note in notes %}
+          <li>
+            <h2>
+              <a href="{% url 'reader:section' note.book_slug note.section_path %}">
+                {{ note.title }}
+              </a>
+            </h2>
+            <p class="citation">{{ note.book_slug }} → {{ note.section_path }}</p>
+            <p>{{ note.body }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-state">No notes yet.</div>
+    {% endif %}
+  {% endif %}
+{% endblock %}

@@ -14,11 +14,13 @@ from apps.catalog.services import (
     resolve_section_for_entry,
 )
 from apps.library.models import Book
+from apps.library.preferences import apply_reviewed_only, get_reviewed_only
 from apps.sources.models import SourceSnapshot
 
 
 def catalog_index(request: HttpRequest) -> HttpResponse:
-    counts = coverage_counts()
+    only = get_reviewed_only(request)
+    counts = coverage_counts(reviewed_only=only)
     return render(
         request,
         "catalog/index.html",
@@ -31,12 +33,13 @@ def catalog_index(request: HttpRequest) -> HttpResponse:
 
 
 def catalog_coverage(request: HttpRequest) -> HttpResponse:
+    only = get_reviewed_only(request)
     return render(
         request,
         "catalog/coverage.html",
         {
-            "coverage_rows": coverage_by_book(),
-            "counts": coverage_counts(),
+            "coverage_rows": coverage_by_book(reviewed_only=only),
+            "counts": coverage_counts(reviewed_only=only),
             "page_title": "Lexicon coverage",
             "breadcrumbs": [
                 {"label": "Lexicon", "url": reverse("catalog:index")},
@@ -50,7 +53,8 @@ def catalog_list(request: HttpRequest, entry_type: str) -> HttpResponse:
     if entry_type not in CatalogEntry.EntryType.values:
         entry_type = CatalogEntry.EntryType.SPELL
 
-    entries = current_entries().filter(
+    only = get_reviewed_only(request)
+    entries = current_entries(reviewed_only=only).filter(
         entry_type=entry_type,
         kind=CatalogEntry.Kind.DEFINITION,
     )
@@ -82,7 +86,10 @@ def catalog_list(request: HttpRequest, entry_type: str) -> HttpResponse:
 
     current = SourceSnapshot.current()
     if current:
-        books = Book.objects.filter(snapshot=current).order_by("title")
+        books = apply_reviewed_only(
+            Book.objects.filter(snapshot=current).order_by("title"),
+            request,
+        )
     else:
         books = Book.objects.none()
 
@@ -113,13 +120,14 @@ def catalog_list(request: HttpRequest, entry_type: str) -> HttpResponse:
             "books": books,
             "breadcrumbs": breadcrumbs,
             "page_title": label,
-            "counts": coverage_counts(),
+            "counts": coverage_counts(reviewed_only=only),
         },
     )
 
 
 def catalog_detail(request: HttpRequest, entry_type: str, slug: str) -> HttpResponse:
-    matches = current_entries().filter(
+    only = get_reviewed_only(request)
+    matches = current_entries(reviewed_only=only).filter(
         entry_type=entry_type,
         slug=slug,
         kind=CatalogEntry.Kind.DEFINITION,
@@ -131,7 +139,7 @@ def catalog_detail(request: HttpRequest, entry_type: str, slug: str) -> HttpResp
     if entry is None:
         raise Http404("No catalog entry matches.")
     section = resolve_section_for_entry(entry)
-    related = current_entries().filter(
+    related = current_entries(reviewed_only=only).filter(
         entry_type=entry_type,
         slug=slug,
     ).exclude(pk=entry.pk)[:20]

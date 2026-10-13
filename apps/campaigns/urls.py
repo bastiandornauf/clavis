@@ -5,7 +5,8 @@ from apps.campaigns import views
 app_name = "campaigns"
 
 urlpatterns = [
-    path("", views.campaign_list, name="list"),
+    path("", views.workspace, name="workspace"),
+    path("list/", views.campaign_list, name="list"),
     path("new/", views.campaign_create, name="create"),
     path("add/", views.campaign_add_section, name="add"),
     path("<slug:slug>/", views.campaign_detail, name="detail"),

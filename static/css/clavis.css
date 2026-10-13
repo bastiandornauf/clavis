@@ -1,3 +1,15 @@
+/* Clavis design system
+ *
+ * Cascade layer order (low → high priority):
+ * tokens → reset → base → layout → components → utilities
+ *
+ * Prefer intrinsic layouts (auto-fit/auto-fill, min/max/clamp, container
+ * queries) over one-off viewport breakpoints. See docs/design-system.md.
+ */
+
+@layer tokens, reset, base, layout, components, utilities;
+
+@layer tokens {
 :root {
   --color-bg: #f3efe6;
   --color-bg-elevated: #fbf8f1;
@@ -20,18 +32,25 @@
   --space-5: 1.5rem;
   --space-6: 2rem;
   --space-7: 3rem;
-  --radius: 0.35rem;
-  --content-width: 42rem;
+  /* Fluid measure: comfortable reading width within fixed bounds. */
+  --content-width: clamp(20rem, 55ch, 42rem);
   --shell-max: 72rem;
+  --shell-gutter: clamp(1rem, 2.5vw, 2rem);
+  --card-min: 16rem;
+  --gallery-tile-min: 11rem;
   --focus: 0 0 0 3px color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
 }
 
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
 html {
   font-size: 112.5%;
 }
@@ -88,64 +107,89 @@ a:hover {
 .site-header__inner,
 .site-footer__inner,
 .shell {
-  width: min(100% - 2rem, var(--shell-max));
+  width: min(100% - (2 * var(--shell-gutter)), var(--shell-max));
   margin-inline: auto;
+}
+
+.shell {
+  container-type: inline-size;
+  container-name: shell;
+  padding: var(--space-4) 0 var(--space-6);
 }
 
 .site-header__inner {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-4);
+  gap: 0.35rem 0.75rem;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) 0;
+  padding: 0.4rem 0;
 }
 
 .brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding-right: var(--space-5);
   font-family: var(--font-display);
-  font-size: 1.45rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: var(--color-ink);
   text-decoration: none;
   letter-spacing: 0.01em;
+  line-height: 1.1;
+  flex: 0 0 auto;
 }
 
-.brand span {
-  display: block;
+.brand__tag {
   font-family: var(--font-ui);
-  font-size: 0.7rem;
+  font-size: 0.58rem;
   font-weight: 500;
   color: var(--color-ink-muted);
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+@media (max-width: 52rem) {
+  .brand__tag {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
 }
 
 .nav {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
+  gap: 0.1rem 0.15rem;
   align-items: center;
   font-family: var(--font-ui);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  flex: 1 1 12rem;
+  min-width: 0;
 }
 
 .nav-group {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
-  padding-right: var(--space-3);
+  gap: 0;
+  padding-right: 0.4rem;
+  margin-right: 0.25rem;
   border-right: 1px solid var(--color-border);
 }
 
 .nav-group:last-child {
   border-right: 0;
   padding-right: 0;
+  margin-right: 0;
 }
 
 .nav a {
   color: var(--color-ink);
   text-decoration: none;
-  padding: var(--space-1) var(--space-2);
+  padding: 0.15rem 0.35rem;
   border-radius: var(--radius);
 }
 
@@ -155,20 +199,120 @@ a:hover {
   color: var(--color-accent);
 }
 
-.header-search {
+.header-tools {
+  --header-control-h: 1.85rem;
   display: flex;
-  gap: var(--space-2);
+  flex-wrap: nowrap;
   align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  margin-inline-start: auto;
+  flex: 0 0 auto;
 }
 
-.header-search input {
-  min-width: 10rem;
-  width: 12rem;
-  padding: 0.4rem 0.6rem;
+.header-search,
+.header-pref {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.header-search {
+  gap: 0;
+}
+
+.header-search input[type="search"] {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 9rem;
+  height: var(--header-control-h);
+  padding: 0 0.55rem;
+  font-size: 0.8rem;
+  line-height: 1;
+  border-radius: var(--radius) 0 0 var(--radius);
+  border-right: 0;
 }
 
 .header-search button {
-  padding: 0.4rem 0.7rem;
+  box-sizing: border-box;
+  height: var(--header-control-h);
+  min-height: var(--header-control-h);
+  padding: 0 0.65rem;
+  font-size: 0.75rem;
+  line-height: 1;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-search input:focus {
+  position: relative;
+  z-index: 1;
+}
+
+/* Accessible switch (checkbox + track); works without JS beyond form submit. */
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.switch__track {
+  position: relative;
+  display: inline-block;
+  width: 1.85rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-border) 70%, var(--color-ink-muted));
+  border: 1px solid var(--color-border);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.switch__thumb {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: calc(1.05rem - 4px);
+  height: calc(1.05rem - 4px);
+  border-radius: 50%;
+  background: var(--color-bg-elevated);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-ink) 25%, transparent);
+  transition: transform 0.15s ease;
+}
+
+.switch input:checked + .switch__track {
+  background: color-mix(in srgb, var(--color-accent) 75%, #000);
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
+}
+
+.switch input:checked + .switch__track .switch__thumb {
+  transform: translateX(0.8rem);
+}
+
+.switch input:focus-visible + .switch__track {
+  box-shadow: var(--focus);
+}
+
+.switch:hover {
+  color: var(--color-ink);
 }
 
 .visually-hidden {
@@ -329,7 +473,7 @@ a:hover {
 
 .meta-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
   gap: var(--space-3);
   margin: 0 0 var(--space-5);
   font-family: var(--font-ui);
@@ -371,10 +515,6 @@ a:hover {
   color: var(--color-ink-muted);
 }
 
-.shell {
-  padding: var(--space-5) 0 var(--space-7);
-}
-
 .messages {
   list-style: none;
   padding: 0;
@@ -402,15 +542,15 @@ a:hover {
 
 .page-title {
   font-family: var(--font-display);
-  font-size: clamp(1.8rem, 3vw, 2.4rem);
-  margin: 0 0 var(--space-4);
+  font-size: clamp(1.55rem, 2.4vw, 2rem);
+  margin: 0 0 var(--space-3);
   line-height: 1.15;
 }
 
 .lede {
   color: var(--color-ink-muted);
   max-width: 40rem;
-  margin-top: 0;
+  margin: 0 0 var(--space-3);
 }
 
 .toolbar,
@@ -418,15 +558,15 @@ a:hover {
 .stack-form {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
   align-items: end;
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-3);
 }
 
 .filter-count {
-  margin: calc(-1 * var(--space-3)) 0 var(--space-4);
+  margin: 0 0 var(--space-3);
   font-family: var(--font-ui);
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   color: var(--color-ink-muted);
 }
 
@@ -494,13 +634,17 @@ button.secondary:hover,
 
 .book-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--card-min)), 1fr));
   gap: var(--space-4);
+  align-items: stretch;
 }
 
 .book-card {
-  display: block;
-  padding: var(--space-4);
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 2;
+  gap: var(--space-2);
+  padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-bg-elevated);
@@ -515,7 +659,13 @@ button.secondary:hover,
 .book-card h2 {
   font-family: var(--font-display);
   font-size: 1.15rem;
-  margin: 0 0 var(--space-2);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.book-card .meta {
+  margin: 0;
+  align-self: end;
 }
 
 .meta,
@@ -547,7 +697,8 @@ button.secondary:hover,
   align-items: start;
 }
 
-@media (max-width: 860px) {
+/* Collapse TOC when the shell (not the viewport alone) is narrow. */
+@container shell (max-width: 54rem) {
   .reader {
     grid-template-columns: 1fr;
   }
@@ -556,6 +707,21 @@ button.secondary:hover,
     position: static;
     height: auto;
     max-height: min(50vh, 24rem);
+  }
+}
+
+/* Fallback when container queries are unavailable. */
+@supports not (container-type: inline-size) {
+  @media (max-width: 860px) {
+    .reader {
+      grid-template-columns: 1fr;
+    }
+
+    .toc-panel {
+      position: static;
+      height: auto;
+      max-height: min(50vh, 24rem);
+    }
   }
 }
 
@@ -818,6 +984,7 @@ button.secondary:hover,
 
 .reader-article {
   max-width: var(--content-width);
+  width: min(100%, var(--content-width));
 }
 
 .reader-article h1 {
@@ -889,13 +1056,26 @@ button.secondary:hover,
   margin: 0;
   display: grid;
   gap: var(--space-3);
+  container-type: inline-size;
+  container-name: result-list;
 }
 
 .result-list li {
-  padding: var(--space-4);
+  padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-bg-elevated);
+}
+
+@container result-list (max-width: 28rem) {
+  li {
+    padding: var(--space-3);
+  }
+
+  h2,
+  h3 {
+    font-size: 1.05rem;
+  }
 }
 
 .result-list h2 {
@@ -927,7 +1107,10 @@ button.secondary:hover,
 }
 
 .gallery-album {
+  --gallery-tile-min: clamp(9.5rem, 28cqi, 13rem);
   margin: 0 0 var(--space-7);
+  container-type: inline-size;
+  container-name: gallery-album;
 }
 
 .gallery-album h2 {
@@ -943,7 +1126,10 @@ button.secondary:hover,
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, var(--gallery-tile-min)), 1fr)
+  );
   gap: var(--space-5) var(--space-4);
 }
 
@@ -987,12 +1173,6 @@ button.secondary:hover,
   line-height: 1.3;
 }
 
-@media (min-width: 60rem) {
-  .gallery-grid {
-    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
-  }
-}
-
 .warning {
   color: var(--color-danger);
   font-family: var(--font-ui);
@@ -1001,9 +1181,9 @@ button.secondary:hover,
 
 .notice {
   font-family: var(--font-ui);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   margin: 0 0 var(--space-3);
-  padding: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-bg-elevated);
@@ -1031,4 +1211,5 @@ button.secondary:hover,
 .site-footer__inner {
   display: grid;
   gap: var(--space-2);
+}
 }

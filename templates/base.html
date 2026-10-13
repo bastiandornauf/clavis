@@ -12,34 +12,50 @@
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
     <div class="site-header__inner">
-      <a class="brand" href="{% url 'library:index' %}">
+      <a class="brand" href="{% url 'library:index' %}" title="{{ clavis_tagline }}">
         {{ clavis_app_name }}
-        <span>{{ clavis_tagline }}</span>
+        <span class="brand__tag">{{ clavis_tagline }}</span>
       </a>
 
       <nav class="nav" aria-label="Primary">
         <div class="nav-group" role="group" aria-label="Browse">
           <a href="{% url 'library:index' %}" {% if request.resolver_match.app_name == 'reader' or request.resolver_match.app_name == 'library' and request.resolver_match.url_name == 'index' %}aria-current="page"{% endif %}>Library</a>
-          <a href="{% url 'library:gallery' %}" {% if request.resolver_match.app_name == 'library' and request.resolver_match.url_name == 'gallery' or request.resolver_match.app_name == 'library' and request.resolver_match.url_name == 'gallery_file' %}aria-current="page"{% endif %}>Gallery</a>
           <a href="{% url 'catalog:index' %}" {% if request.resolver_match.app_name == 'catalog' %}aria-current="page"{% endif %}>Lexicon</a>
-        </div>
-        <div class="nav-group" role="group" aria-label="Find">
-          <a href="{% url 'search:index' %}" {% if request.resolver_match.app_name == 'search' %}aria-current="page"{% endif %}>Search</a>
+          <a href="{% url 'library:gallery' %}" {% if request.resolver_match.app_name == 'library' and request.resolver_match.url_name == 'gallery' or request.resolver_match.app_name == 'library' and request.resolver_match.url_name == 'gallery_file' %}aria-current="page"{% endif %}>Gallery</a>
         </div>
         <div class="nav-group" role="group" aria-label="Prepare">
-          <a href="{% url 'campaigns:list' %}" {% if request.resolver_match.app_name == 'campaigns' %}aria-current="page"{% endif %}>Campaigns</a>
-          <a href="{% url 'annotations:bookmarks' %}" {% if request.resolver_match.app_name == 'annotations' %}aria-current="page"{% endif %}>Saved</a>
+          <a href="{% url 'campaigns:workspace' %}" {% if request.resolver_match.app_name == 'campaigns' or request.resolver_match.app_name == 'annotations' %}aria-current="page"{% endif %}>Workspace</a>
         </div>
         <div class="nav-group" role="group" aria-label="System">
           <a href="{% url 'sources:status' %}" {% if request.resolver_match.app_name == 'sources' %}aria-current="page"{% endif %}>Sources</a>
         </div>
       </nav>
 
-      <form class="header-search" method="get" action="{% url 'search:index' %}" role="search">
-        <label class="visually-hidden" for="header-q">Search all books</label>
-        <input id="header-q" type="search" name="q" placeholder="Search…" value="{{ request.GET.q|default:'' }}">
-        <button type="submit">Go</button>
-      </form>
+      <div class="header-tools">
+        <form class="header-search" method="get" action="{% url 'search:index' %}" role="search">
+          <label class="visually-hidden" for="header-q">Search all books</label>
+          <input id="header-q" type="search" name="q" placeholder="Search…" value="{{ request.GET.q|default:'' }}">
+          <button type="submit">Go</button>
+        </form>
+        <form class="header-pref" method="post" action="{% url 'library:reviewed_only' %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <label
+            class="switch"
+            title="Hide WIP and third-party books in Library, Search, and Lexicon"
+          >
+            <input
+              type="checkbox"
+              name="reviewed_only"
+              value="1"
+              {% if reviewed_only %}checked{% endif %}
+              onchange="this.form.submit()"
+            >
+            <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+            <span class="switch__text">Reviewed</span>
+          </label>
+        </form>
+      </div>
     </div>
   </header>
 

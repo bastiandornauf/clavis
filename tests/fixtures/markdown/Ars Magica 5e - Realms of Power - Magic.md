@@ -25,3 +25,16 @@ Size: 3
 Season: Summer
 
 A slow spirit bound to an ancient oak.
+
+### Stories of Protection
+
+A border guardian may draw magi into its feud.
+
+> ### Donn
+>
+> The Dark One builds an army of the dead at Teach Duínn.
+>
+> **Faerie Might:** 50 (Corpus)<br>
+> **Size:** +1<br>
+>
+> Appearance: Donn stands 7' high with severed heads on his belt.

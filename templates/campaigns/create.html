@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+  {% include "components/breadcrumbs.html" with breadcrumbs=breadcrumbs %}
   <h1 class="page-title">New campaign</h1>
   <form method="post" class="stack-form">
     {% csrf_token %}

@@ -11,8 +11,8 @@ into a readable, searchable library with personal campaign overlays.
 | `apps.library` | Books and sections, Markdown structural parse, stable IDs, released-image gallery |
 | `apps.reader` | TOC, section rendering, navigation |
 | `apps.search` | SQLite FTS5 index and query UI |
-| `apps.annotations` | Bookmarks, notes, last-read position |
-| `apps.campaigns` | Campaign collections of section/excerpt links |
+| `apps.annotations` | Bookmarks, notes, last-read position (lists live under Workspace) |
+| `apps.campaigns` | Workspace hub (campaigns / bookmarks / notes tabs) + campaign detail |
 | `apps.catalog` | Rule-based lexicon (spells, virtues/flaws, seeds, creatures, characters, guidelines, abilities) |
 
 Shared library code lives under `src/clavis/`:
@@ -23,6 +23,10 @@ Shared library code lives under `src/clavis/`:
 The Library **Gallery** browses `released-images/` from the Open License checkout.
 PNG/JPEG serve directly; TIFF/TIF are converted to cached PNG previews under
 `data/cache/released-images/` (Pillow).
+
+A session preference **Reviewed only** (header toggle) limits Library, Search, and
+Lexicon lists/counts to `review_status=reviewed`. Direct URLs to WIP sections
+still resolve.
 
 ## Data flow
 

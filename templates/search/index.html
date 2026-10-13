@@ -26,23 +26,27 @@
         {% endfor %}
       </select>
     </label>
-    <label>
-      Status
-      <select name="status">
-        <option value="">All</option>
-        {% for value, label in status_choices %}
-          <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-    </label>
+    {% if not reviewed_only %}
+      <label>
+        Status
+        <select name="status">
+          <option value="">All</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    {% endif %}
     <button type="submit">Search</button>
   </form>
-
   {% if query and not hits %}
-    <div class="empty-state">No matches for “{{ query }}”.</div>
+    <div class="empty-state">No matches for “{{ query }}”{% if reviewed_only %} in reviewed books{% endif %}.</div>
   {% endif %}
 
   {% if hits %}
+    <p class="filter-count" aria-live="polite">
+      {{ hits|length }} result{{ hits|length|pluralize }}{% if reviewed_only %} (reviewed only){% endif %}
+    </p>
     <ul class="result-list">
       {% for hit in hits %}
         <li>

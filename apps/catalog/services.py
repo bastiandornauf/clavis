@@ -58,16 +58,19 @@ def rebuild_catalog_for_books(book_ids: list[int]) -> int:
     return created
 
 
-def current_entries() -> QuerySet[CatalogEntry]:
+def current_entries(*, reviewed_only: bool = False) -> QuerySet[CatalogEntry]:
     current = SourceSnapshot.current()
     if not current:
         return CatalogEntry.objects.none()
-    return CatalogEntry.objects.filter(snapshot=current).select_related("book")
+    qs = CatalogEntry.objects.filter(snapshot=current).select_related("book")
+    if reviewed_only:
+        qs = qs.filter(book__review_status=Book.ReviewStatus.REVIEWED)
+    return qs
 
 
-def coverage_counts() -> dict[str, int]:
+def coverage_counts(*, reviewed_only: bool = False) -> dict[str, int]:
     qs = (
-        current_entries()
+        current_entries(reviewed_only=reviewed_only)
         .filter(kind=CatalogEntry.Kind.DEFINITION)
         .values("entry_type")
         .annotate(total=Count("id"))
@@ -75,13 +78,15 @@ def coverage_counts() -> dict[str, int]:
     return {row["entry_type"]: row["total"] for row in qs}
 
 
-def coverage_by_book() -> list[dict[str, object]]:
+def coverage_by_book(*, reviewed_only: bool = False) -> list[dict[str, object]]:
     """Per-book lexicon coverage for the current snapshot."""
     current = SourceSnapshot.current()
     if not current:
         return []
 
     books = Book.objects.filter(snapshot=current).order_by("title")
+    if reviewed_only:
+        books = books.filter(review_status=Book.ReviewStatus.REVIEWED)
     rows: list[dict[str, object]] = []
     for book in books:
         typed = {
