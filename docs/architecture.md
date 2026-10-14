@@ -69,13 +69,17 @@ Heading titles decode CommonMark escapes (`Ceremony\*` → `Ceremony*`) for disp
   rule leftovers; default is **typed/signal only** (Might / Specialties misses),
   not a dump of every heading. `--include-untyped` is opt-in noise.
   Cleanup: `--clear-noise`. Accept: `--accept-pending` or admin.
-- **Embeddings** — `rebuild_embeddings` can build local `hashing-v1` vectors for
-  experiments. Search UI is **keyword-only** until a real embedding model is
-  wired (`CLAVIS_SEARCH_MODES_ENABLED=1` is opt-in and still not product-ready
-  with hashing).
+- **Embeddings (meaning search)** — `rebuild_embeddings` runs the local ONNX model
+  `BAAI/bge-small-en-v1.5` via fastembed (384 dims, title + first ~2000 chars per
+  section; model cached in `CLAVIS_DATA_DIR/cache/models`, offline afterwards).
+  Rows are saved per batch; reruns skip unchanged sections and re-imports copy
+  vectors by `content_hash`. Search shows Keyword / Meaning / Keyword + meaning
+  only once vectors for the active model exist (`semantic_search_available`).
+  Scoring is a numpy matrix product over an in-process cache. `hashing-v1` is
+  the dependency-free test backend and never enables the UI on its own.
 
 ## Deferred phases
 
-5. Redistributable catalog packs; more entry types (places, covenants, …)
-6. Stronger local embedding backends (e.g. Apple Silicon MLX)
+5. Redistributable catalog packs; more entry types (lab projects, …)
+6. Long-section chunking for embeddings (one vector per section today)
 7. Later: grounded RAG assistant, campaign AI, saga profiles

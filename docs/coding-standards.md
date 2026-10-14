@@ -261,8 +261,10 @@ A task is done when:
 
 ## AI features (keep optional)
 
-Enrichment + local semantic/hybrid search scaffolds live under `apps.catalog`
-and `apps.search`. Do **not** add generative chat/RAG, remote LLM calls, or a
-second citation/Markdown stack unless explicitly asked. Enrichment must stay
-reviewable; the app must run fully offline without API keys.
+Enrichment lives under `apps.catalog`; local-model meaning search under
+`apps.search` (`embeddings.py`, `semantic.py`). Do **not** add generative
+chat/RAG, remote LLM calls, or a second citation/Markdown stack unless explicitly
+asked. Enrichment must stay reviewable; the app must run fully offline without API
+keys. Import ML libraries lazily, and keep tests on the `hashing-v1` backend (set
+in `tests/conftest.py`) so they never download a model.
 

@@ -106,7 +106,20 @@ Clavis does not ship book text in this repository. Import pulls Markdown from th
 [Ars Magica Open License](https://github.com/OriginalMadman/Ars-Magica-Open-License)
 project. Clavis is independent and not affiliated with Atlas Games.
 
+## Meaning search (optional, local)
+
+Search can also match by meaning ("faerie queen marries a baby heir" finds
+*Birth Right* in *Hooks*). It runs a small model on your machine — no API key.
+Build the index once (downloads ~65 MB on first run, ≈30 min for all books):
+
+```bash
+uv run python manage.py rebuild_embeddings
+```
+
+Afterwards Search offers Keyword / Meaning / Keyword + meaning, and imports keep
+the index current. Interrupted runs resume.
+
 ## Deferred features
 
-LLM enrichment, generative chat/RAG, and semantic search stay out of scope until
-explicitly requested. See `docs/architecture.md`.
+Remote LLM enrichment and generative chat/RAG stay out of scope until explicitly
+requested. See `docs/architecture.md`.

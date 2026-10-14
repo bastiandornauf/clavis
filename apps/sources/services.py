@@ -201,10 +201,9 @@ def import_sources(
 
         rebuild_fts_for_books(book_ids)
         rebuild_catalog_for_books(book_ids)
-        if getattr(settings, "CLAVIS_REBUILD_EMBEDDINGS_ON_IMPORT", False):
-            from apps.search.embeddings import rebuild_embeddings_for_books
+        from apps.search.embeddings import refresh_embeddings_after_import
 
-            rebuild_embeddings_for_books(book_ids)
+        refresh_embeddings_after_import(book_ids)
         if getattr(settings, "CLAVIS_ENRICH_ON_IMPORT", False):
             from apps.catalog.enrichment import (
                 collect_proposals,

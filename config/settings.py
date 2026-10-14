@@ -115,13 +115,17 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Optional AI tracks (Phase 1–2). App works fully offline without these.
 CLAVIS_LLM_API_KEY = os.environ.get("CLAVIS_LLM_API_KEY", "").strip()
 CLAVIS_ENRICH_ON_IMPORT = os.environ.get("CLAVIS_ENRICH_ON_IMPORT", "0") == "1"
-CLAVIS_EMBEDDINGS_BACKEND = os.environ.get("CLAVIS_EMBEDDINGS_BACKEND", "hashing-v1")
-CLAVIS_REBUILD_EMBEDDINGS_ON_IMPORT = (
-    os.environ.get("CLAVIS_REBUILD_EMBEDDINGS_ON_IMPORT", "0") == "1"
-)
-# Semantic/Hybrid stay out of the UI until a real embedding model lands.
-# Hashing backend remains available via management command for experiments.
-CLAVIS_SEARCH_MODES_ENABLED = os.environ.get("CLAVIS_SEARCH_MODES_ENABLED", "0") == "1"
+# "local" runs a small ONNX model on this machine (downloaded once into
+# CLAVIS_DATA_DIR/cache/models). "hashing-v1" is a dependency-free test backend.
+CLAVIS_EMBEDDINGS_BACKEND = os.environ.get("CLAVIS_EMBEDDINGS_BACKEND", "local")
+CLAVIS_EMBEDDINGS_MODEL = os.environ.get("CLAVIS_EMBEDDINGS_MODEL", "BAAI/bge-small-en-v1.5")
+# auto: refresh vectors on import only once an index exists (unchanged sections reuse
+# their vectors). 1: always. 0: never.
+CLAVIS_REBUILD_EMBEDDINGS_ON_IMPORT = os.environ.get(
+    "CLAVIS_REBUILD_EMBEDDINGS_ON_IMPORT", "auto"
+).lower()
+# auto: show search modes once real-model vectors exist. 1: also for hashing. 0: never.
+CLAVIS_SEARCH_MODES_ENABLED = os.environ.get("CLAVIS_SEARCH_MODES_ENABLED", "auto").lower()
 
 LOGGING = {
     "version": 1,

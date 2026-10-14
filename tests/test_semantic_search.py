@@ -3,13 +3,20 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from django.core.management import call_command
 from django.urls import reverse
 
 from apps.library.models import Book, Section
-from apps.search.embeddings import HashingEmbedder, rebuild_embeddings_for_books
+from apps.search.embeddings import (
+    HashingEmbedder,
+    rebuild_embeddings_for_books,
+    semantic_search_available,
+)
 from apps.search.models import SectionEmbedding
-from apps.search.semantic import search_sections_hybrid, search_sections_semantic
+from apps.search.semantic import (
+    _semantic_snippet,
+    search_sections_hybrid,
+    search_sections_semantic,
+)
 from apps.search.services import search_sections
 from apps.sources.models import SourceSnapshot
 from apps.sources.services import import_sources
@@ -77,11 +84,59 @@ def test_hybrid_search_combines_modes(fixture_markdown_dir: Path):
 
 
 @pytest.mark.django_db
-def test_search_page_hides_mode_selector_by_default(client, fixture_markdown_dir: Path):
+def test_search_page_hides_mode_selector_without_index(client, fixture_markdown_dir: Path):
     import_sources(sync=False, local_path=fixture_markdown_dir)
     response = client.get(reverse("search:index"), {"q": "Pilum", "mode": "hybrid"})
     assert response.status_code == 200
     body = response.content.decode()
     assert "Pilum of Fire" in body
-    # Hashing semantic/hybrid is not product-ready; UI stays keyword-only.
     assert 'name="mode"' not in body
+
+
+@pytest.mark.django_db
+def test_hashing_index_alone_does_not_enable_modes(client, fixture_markdown_dir: Path):
+    import_sources(sync=False, local_path=fixture_markdown_dir)
+    rebuild_embeddings_for_books(list(Book.objects.values_list("id", flat=True)))
+    assert not semantic_search_available()
+
+
+@pytest.mark.django_db
+def test_search_page_offers_modes_when_index_exists(
+    client, settings, fixture_markdown_dir: Path
+):
+    settings.CLAVIS_SEARCH_MODES_ENABLED = "1"
+    import_sources(sync=False, local_path=fixture_markdown_dir)
+    rebuild_embeddings_for_books(list(Book.objects.values_list("id", flat=True)))
+    response = client.get(reverse("search:index"), {"q": "Pilum", "mode": "semantic"})
+    body = response.content.decode()
+    assert 'name="mode"' in body
+    assert '<option value="semantic" selected>' in body
+    assert "Pilum of Fire" in body
+
+
+@pytest.mark.django_db
+def test_reimport_reuses_unchanged_vectors(settings, fixture_markdown_dir: Path, monkeypatch):
+    import_sources(sync=False, local_path=fixture_markdown_dir)
+    rebuild_embeddings_for_books(list(Book.objects.values_list("id", flat=True)))
+    count = SectionEmbedding.objects.count()
+    assert count
+
+    embedded: list[int] = []
+    original = HashingEmbedder.embed_documents
+
+    def counting(self, texts):
+        embedded.append(len(texts))
+        return original(self, texts)
+
+    monkeypatch.setattr(HashingEmbedder, "embed_documents", counting)
+    settings.CLAVIS_SEARCH_MODES_ENABLED = "1"
+    import_sources(sync=False, local_path=fixture_markdown_dir)
+
+    assert SectionEmbedding.objects.count() == count
+    assert sum(embedded) == 0
+    assert semantic_search_available()
+
+
+def test_semantic_snippet_is_escaped():
+    section = Section(title="X", body_markdown="<script>alert(1)</script> fire spear")
+    assert "<script>" not in _semantic_snippet(section, "fire")

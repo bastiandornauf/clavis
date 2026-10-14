@@ -192,7 +192,7 @@ Lab projects still deferred.
 - Command `enrich_catalog` (default `--provider dry-run`, no network).
 - `EnrichmentProposal` rows; accept promotes `CatalogEntry` with `extractor=llm`.
 - Remote LLM provider stub refuses without a wired implementation / API key.
-- Search UI stays keyword-only until a real embedding model exists.
+- Search offers meaning modes once the local-model index is built (`rebuild_embeddings`).
 
 ## Suggested sequence for you
 

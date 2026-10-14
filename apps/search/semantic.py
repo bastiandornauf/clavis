@@ -3,18 +3,67 @@
 from __future__ import annotations
 
 import re
+import threading
+from dataclasses import dataclass
+
+import numpy as np
+from django.db.models import Count, Max
+from django.utils.html import escape
 
 from apps.library.models import Book, Section
-from apps.search.embeddings import (
-    cosine_similarity,
-    get_embedder,
-    unpack_vector,
-)
+from apps.search.embeddings import get_embedder
 from apps.search.models import SectionEmbedding
 from apps.search.services import SearchHit, ensure_fts_schema, search_sections
 from apps.sources.models import SourceSnapshot
 
 _SAFE_TOKEN = re.compile(r"[^\w]+", re.UNICODE)
+
+
+@dataclass(frozen=True)
+class _VectorIndex:
+    key: tuple
+    section_ids: np.ndarray
+    book_ids: np.ndarray
+    matrix: np.ndarray
+
+
+_index_lock = threading.Lock()
+_index: _VectorIndex | None = None
+
+
+def _load_index(snapshot: SourceSnapshot, model_name: str, dimensions: int) -> _VectorIndex:
+    """All vectors of one model/snapshot as a matrix, cached until rows change."""
+    global _index
+    rows = SectionEmbedding.objects.filter(
+        book__snapshot=snapshot, model_name=model_name, dimensions=dimensions
+    )
+    stats = rows.aggregate(count=Count("pk"), latest=Max("updated_at"))
+    key = (snapshot.pk, model_name, dimensions, stats["count"], stats["latest"])
+    with _index_lock:
+        if _index is not None and _index.key == key:
+            return _index
+        section_ids: list[int] = []
+        book_ids: list[int] = []
+        buffers: list[bytes] = []
+        for section_id, book_id, vector in rows.values_list(
+            "section_id", "book_id", "vector"
+        ).iterator(chunk_size=2000):
+            section_ids.append(section_id)
+            book_ids.append(book_id)
+            buffers.append(bytes(vector))
+        if buffers:
+            matrix = np.frombuffer(b"".join(buffers), dtype=np.float32).reshape(
+                len(buffers), dimensions
+            )
+        else:
+            matrix = np.zeros((0, dimensions), dtype=np.float32)
+        _index = _VectorIndex(
+            key=key,
+            section_ids=np.asarray(section_ids, dtype=np.int64),
+            book_ids=np.asarray(book_ids, dtype=np.int64),
+            matrix=matrix,
+        )
+        return _index
 
 
 def search_sections_semantic(
@@ -45,36 +94,35 @@ def search_sections_semantic(
         return []
 
     embedder = get_embedder()
-    query_vec = unpack_vector(embedder.embed(query), embedder.dimensions)
-    rows = SectionEmbedding.objects.filter(
-        book_id__in=book_ids,
-        model_name=embedder.model_name,
-    ).only("section_id", "vector", "dimensions")
+    index = _load_index(current, embedder.model_name, embedder.dimensions)
+    if not len(index.section_ids):
+        return []
+    query_vec = np.frombuffer(embedder.embed_query(query), dtype=np.float32)
 
-    scored: list[tuple[int, float]] = []
-    for row in rows.iterator():
-        try:
-            vec = unpack_vector(bytes(row.vector), row.dimensions)
-        except ValueError:
-            continue
-        score = cosine_similarity(query_vec, vec)
-        if score <= 0:
-            continue
-        scored.append((row.section_id, score))
-
-    scored.sort(key=lambda item: item[1], reverse=True)
-    top = scored[:limit]
-    if not top:
+    mask = np.isin(index.book_ids, np.asarray(book_ids, dtype=np.int64))
+    candidates = np.flatnonzero(mask)
+    if not len(candidates):
+        return []
+    scores = index.matrix[candidates] @ query_vec
+    take = min(limit, len(candidates))
+    top = np.argpartition(-scores, take - 1)[:take]
+    top = top[np.argsort(-scores[top])]
+    ranked = [
+        (int(index.section_ids[candidates[i]]), float(scores[i]))
+        for i in top
+        if scores[i] > 0
+    ]
+    if not ranked:
         return []
 
     sections = {
         section.id: section
-        for section in Section.objects.filter(id__in=[sid for sid, _ in top]).select_related(
+        for section in Section.objects.filter(id__in=[sid for sid, _ in ranked]).select_related(
             "book", "book__snapshot", "parent"
         )
     }
     hits: list[SearchHit] = []
-    for section_id, score in top:
+    for section_id, score in ranked:
         section = sections.get(section_id)
         if section is None:
             continue
@@ -150,18 +198,19 @@ def _minmax(scores: dict[int, float]) -> dict[int, float]:
 
 
 def _semantic_snippet(section: Section, query: str) -> str:
+    """Plain-text excerpt; escaped because the template renders snippets as HTML."""
     body = (section.body_markdown or "").strip()
     if not body:
         return ""
-    tokens = [t for t in _SAFE_TOKEN.split(query.lower()) if t]
+    tokens = [t for t in _SAFE_TOKEN.split(query.lower()) if len(t) > 2]
     lower = body.lower()
     for token in tokens:
         idx = lower.find(token)
         if idx >= 0:
             start = max(0, idx - 40)
-            end = min(len(body), idx + len(token) + 80)
+            end = min(len(body), idx + len(token) + 120)
             snippet = body[start:end].replace("\n", " ")
             prefix = "…" if start else ""
             suffix = "…" if end < len(body) else ""
-            return f"{prefix}{snippet}{suffix}"
-    return body[:140].replace("\n", " ") + ("…" if len(body) > 140 else "")
+            return escape(f"{prefix}{snippet}{suffix}")
+    return escape(body[:180].replace("\n", " ") + ("…" if len(body) > 180 else ""))

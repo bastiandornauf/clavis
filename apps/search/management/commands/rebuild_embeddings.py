@@ -10,13 +10,16 @@ from apps.sources.models import SourceSnapshot
 
 
 class Command(BaseCommand):
-    help = "Rebuild section embeddings for the current snapshot (hashing-v1 by default)."
+    help = (
+        "Build section embeddings for the current snapshot with the local model "
+        "(downloaded once on first run). Unchanged sections are skipped."
+    )
 
     def add_arguments(self, parser) -> None:
         parser.add_argument(
             "--backend",
             default=None,
-            help="Embedding backend (default: settings.CLAVIS_EMBEDDINGS_BACKEND)",
+            help="local (default) or hashing-v1; default: settings.CLAVIS_EMBEDDINGS_BACKEND",
         )
         parser.add_argument(
             "--book",
@@ -38,12 +41,18 @@ class Command(BaseCommand):
         if not book_ids:
             raise CommandError("No matching books to embed.")
 
+        self.stdout.write("Loading embedding model…")
         try:
             embedder = get_embedder(options["backend"])
-        except ValueError as exc:
+        except (ValueError, ImportError) as exc:
             raise CommandError(str(exc)) from exc
 
-        updated = rebuild_embeddings_for_books(book_ids, embedder=embedder)
+        def progress(done: int, total: int) -> None:
+            self.stdout.write(f"  embedded {done}/{total} sections", ending="\r")
+            self.stdout.flush()
+
+        updated = rebuild_embeddings_for_books(book_ids, embedder=embedder, progress=progress)
+        self.stdout.write("")
         self.stdout.write(
             self.style.SUCCESS(
                 f"Embeddings ready ({embedder.model_name}): "
