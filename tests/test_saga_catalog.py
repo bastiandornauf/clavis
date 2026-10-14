@@ -223,3 +223,74 @@ def test_extract_enchanted_item(tmp_path: Path):
     assert entry is not None
     assert entry.entry_type == "item"
     assert CatalogEntry.EntryType.ITEM in CatalogEntry.EntryType.values
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("body", "use", "art"),
+    [
+        (
+            "ReCo 30\n\nPen +12, 12/day\n\nR: Touch, D: Mom, T: Ind\n\nHurls the target.",
+            "12/day",
+            ("Rego", "Corpus", 30),
+        ),
+        (
+            "**CrAu** 40  \n\n**Pen** 0, 24 uses per day  \n\n**R:** Touch, **D:** Sun, "
+            "**T:** Ind\n\nKeeps the rain off.",
+            "24/day",
+            ("Creo", "Auram", 40),
+        ),
+        (
+            "InVi 50  \nPenetration +32, constant effect   \nR: Touch D: Sun, T Room  \n"
+            "Detects magical beings.",
+            "Constant effect",
+            ("Intellego", "Vim", 50),
+        ),
+        (
+            "CrIm 28\n\nPen +0, unlimited uses/day\n\nR: Touch, D: Sun, T: Ind\n\nWakes.",
+            "Unlimited uses/day",
+            ("Creo", "Imaginem", 28),
+        ),
+    ],
+)
+def test_device_effect_use_line_makes_item(tmp_path: Path, body, use, art):
+    section = _section(_book(tmp_path), level=4, title="Some Effect", body_markdown=body)
+    entry = extract_item(section)
+    assert entry is not None
+    assert entry.category == use
+    assert (entry.technique, entry.form, entry.level) == art
+
+
+@pytest.mark.django_db
+def test_device_heading_makes_item(tmp_path: Path):
+    section = _section(
+        _book(tmp_path),
+        level=2,
+        title="Talisman: Staff of Ranulf",
+        body_markdown="A gnarled oak staff bound with bronze.",
+    )
+    entry = extract_item(section)
+    assert (entry.name, entry.category) == ("Staff of Ranulf", "Talisman")
+
+
+@pytest.mark.django_db
+def test_theurgy_daimon_effect_is_not_an_item(tmp_path: Path):
+    section = _section(
+        _book(tmp_path),
+        level=5,
+        title="Apollo's Luminescent Blessing",
+        path="azai/example-azai-effects/apollo-s-luminescent-blessing",
+        body_markdown="R: Touch, D: Conc, T: Ind Ignem, Pen +4, 6 uses/day\n\nGlows.",
+    )
+    assert extract_item(section) is None
+
+
+@pytest.mark.django_db
+def test_power_cost_line_is_not_an_item(tmp_path: Path):
+    section = _section(
+        _book(tmp_path),
+        level=4,
+        title="Lesser Power",
+        body_markdown="1 point, Init +2, Corpus: The demon causes pain. Pen +0 against.",
+    )
+    assert extract_item(section) is None

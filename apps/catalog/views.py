@@ -19,8 +19,16 @@ from apps.catalog.services import (
     workshop_cell,
     workshop_grid,
 )
+from apps.catalog.similarity import (
+    candidate_types,
+    entries_by_description,
+    missed_entry_candidates,
+    similar_entries,
+)
 from apps.library.models import Book
 from apps.library.preferences import apply_reviewed_only, get_reviewed_only
+from apps.search.embeddings import semantic_search_available
+from apps.search.semantic import related_sections
 from apps.search.services import sections_mentioning
 from apps.sources.models import SourceSnapshot
 
@@ -46,11 +54,42 @@ def catalog_coverage(request: HttpRequest) -> HttpResponse:
         "catalog/coverage.html",
         {
             "coverage_rows": coverage_by_book(reviewed_only=only),
+            "meaning_available": semantic_search_available(),
             "counts": coverage_counts(reviewed_only=only),
             "page_title": "Lexicon coverage",
             "breadcrumbs": [
                 {"label": "Lexicon", "url": reverse("catalog:index")},
                 {"label": "Coverage", "url": None},
+            ],
+        },
+    )
+
+
+def catalog_candidates(request: HttpRequest) -> HttpResponse:
+    types = candidate_types()
+    entry_type = request.GET.get("type", "").strip()
+    if entry_type not in dict(types):
+        entry_type = types[0][0] if types else ""
+    available = semantic_search_available()
+    candidates = missed_entry_candidates(entry_type) if available and entry_type else []
+    if get_reviewed_only(request):
+        candidates = [
+            c for c in candidates if c.section.book.review_status == Book.ReviewStatus.REVIEWED
+        ]
+    return render(
+        request,
+        "catalog/candidates.html",
+        {
+            "types": types,
+            "entry_type": entry_type,
+            "entry_type_label": dict(types).get(entry_type, ""),
+            "candidates": candidates,
+            "meaning_available": available,
+            "page_title": "Possibly missed entries",
+            "breadcrumbs": [
+                {"label": "Lexicon", "url": reverse("catalog:index")},
+                {"label": "Coverage", "url": reverse("catalog:coverage")},
+                {"label": "Possibly missed", "url": None},
             ],
         },
     )
@@ -153,15 +192,24 @@ def catalog_list(request: HttpRequest, entry_type: str) -> HttpResponse:
         {"label": "Lexicon", "url": reverse("catalog:index")},
         {"label": label, "url": None},
     ]
-    result_count = entries.count()
+    meaning = semantic_search_available()
+    describe = request.GET.get("describe", "").strip() if meaning else ""
     display_limit = 500
+    if describe:
+        shown = entries_by_description(entries, describe)
+        result_count = len(shown)
+    else:
+        result_count = entries.count()
+        shown = entries[:display_limit]
     return render(
         request,
         "catalog/list.html",
         {
-            "entries": entries[:display_limit],
+            "entries": shown,
             "result_count": result_count,
             "display_limit": display_limit,
+            "meaning_available": meaning,
+            "describe": describe,
             "entry_type": entry_type,
             "entry_type_label": label,
             "query": q,
@@ -211,6 +259,17 @@ def catalog_detail(request: HttpRequest, entry_type: str, slug: str) -> HttpResp
             if not only or hit.section.book.review_status == Book.ReviewStatus.REVIEWED
         ]
 
+    similar: list[CatalogEntry] = []
+    reprints = []
+    if semantic_search_available():
+        similar = [
+            other
+            for other in similar_entries(entry)
+            if not only or other.book.review_status == Book.ReviewStatus.REVIEWED
+        ]
+        if section is not None:
+            reprints = related_sections(section).reprints
+
     breadcrumbs = [
         {"label": "Lexicon", "url": reverse("catalog:index")},
         {
@@ -227,6 +286,8 @@ def catalog_detail(request: HttpRequest, entry_type: str, slug: str) -> HttpResp
             "section": section,
             "related": related,
             "mentions": mentions,
+            "similar_entries": similar,
+            "reprints": reprints,
             "in_workshop": entry.technique in TECHNIQUES and entry.form in FORMS,
             "breadcrumbs": breadcrumbs,
             "page_title": entry.name,

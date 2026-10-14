@@ -11,6 +11,7 @@ from apps.catalog.extractors import (
     MIGHT_LINE_RE,
     SKIP_TITLE_RE,
     ExtractedEntry,
+    _art_lead,
     _clean_body,
     _section_title,
 )
@@ -110,6 +111,31 @@ SKIP_ITEM_TITLE_RE = re.compile(
     r"examples? of|forging|enchanting)\b",
     re.I,
 )
+# Device effect line: ``Pen +0, 6/day``, ``**Pen:** 0, 24 uses per day``,
+# ``Penetration +32, constant effect``.
+ITEM_USE_RE = re.compile(
+    r"\bPen(?:etration)?\**:?\**\s*(?:[+-]?\s*\d+|n/a)\s*,\s*"
+    r"(?P<use>constant effect|(?P<count>\d+|unlimited)\s*(?:uses?\s*)?(?:per|/|a)\s*day)",
+    re.I,
+)
+ITEM_USE_WINDOW = 400
+# Theurgy daimon gifts (Ancient Magic "Example Azai Effects") share the use line.
+NOT_DEVICE_PATH_RE = re.compile(r"(?:^|/)example-[a-z-]+-effects/")
+NOT_DEVICE_TITLE_RE = re.compile(r":\s*$|\(cont['’]?d\)", re.I)
+DEVICE_TITLE_RE = re.compile(
+    r"^(?P<kind>Talisman|Invested Device|Lesser Enchanted Device|Charged Item)s?:\s*"
+    r"(?P<name>\S.*)$",
+    re.I,
+)
+
+
+def _item_use_label(use: re.Match[str]) -> str:
+    count = use.group("count")
+    if count is None:
+        return "Constant effect"
+    if count.lower() == "unlimited":
+        return "Unlimited uses/day"
+    return f"{count}/day"
 
 
 def _summary(text: str) -> str:
@@ -351,24 +377,58 @@ def extract_place(section: Section) -> ExtractedEntry | None:
 
 
 def extract_item(section: Section) -> ExtractedEntry | None:
-    """Named enchanted-item writeups (not lab procedure chapters)."""
+    """Enchanted devices and their effects (not lab procedure chapters).
+
+    Recognized: ``Talisman: Name`` style device headings, sections whose head
+    carries a device use line (``Pen +0, 6/day``, ``constant effect``), and
+    ``This enchanted item …`` writeups.
+    """
     title = _section_title(section)
+    path = (section.path or "").lower()
+    if "chapter-8-laboratory" in path or "laboratories/" in path:
+        return None
+    body = _clean_body(section.body_markdown)
+
+    device = DEVICE_TITLE_RE.match(title)
+    if device:
+        name = device.group("name").strip()
+        return ExtractedEntry(
+            entry_type="item",
+            name=name,
+            slug=slugify(name)[:200] or "item",
+            summary=_summary(body),
+            section=section,
+            category=device.group("kind").capitalize(),
+            evidence=title[:240],
+        )
+
     if SKIP_ITEM_TITLE_RE.match(title) or SKIP_TITLE_RE.match(title):
         return None
-    if section.level < 3:
+    head = body[:ITEM_USE_WINDOW]
+    if MIGHT_LINE_RE.search(head):
         return None
 
-    body = _clean_body(section.body_markdown)
-    head = body[:500]
-    if MIGHT_LINE_RE.search(head):
+    use = ITEM_USE_RE.search(head)
+    if use and not (NOT_DEVICE_PATH_RE.search(path) or NOT_DEVICE_TITLE_RE.search(title)):
+        art = _art_lead(head)
+        return ExtractedEntry(
+            entry_type="item",
+            name=title,
+            slug=slugify(title)[:200] or "item",
+            summary=_summary(body),
+            section=section,
+            category=_item_use_label(use),
+            technique=art.technique,
+            form=art.form,
+            level=art.level,
+            evidence=use.group(0)[:240],
+        )
+
+    if section.level < 3:
         return None
     lead = ENCHANTED_ITEM_LEAD_RE.search(head)
     if not lead:
         return None
-    path = (section.path or "").lower()
-    if "chapter-8-laboratory" in path or "laboratories/" in path:
-        return None
-
     return ExtractedEntry(
         entry_type="item",
         name=title,

@@ -47,13 +47,13 @@ def search_page(request: HttpRequest) -> HttpResponse:
         mode = "hybrid" if modes else "keyword"
 
     hits = []
+    meaning_fallback = False
     if query:
-        raw_hits = _search_function(mode)(
-            query,
-            edition=edition,
-            book_slug=book_slug,
-            review_status=effective_status,
-        )
+        filters = {"edition": edition, "book_slug": book_slug, "review_status": effective_status}
+        raw_hits = _search_function(mode)(query, **filters)
+        if not raw_hits and modes and mode == "keyword":
+            raw_hits = _search_function("semantic")(query, limit=20, **filters)
+            meaning_fallback = bool(raw_hits)
         for hit in raw_hits:
             citation = Citation(**citation_parts(hit.section))
             hits.append(
@@ -97,6 +97,7 @@ def search_page(request: HttpRequest) -> HttpResponse:
             "selected_status": effective_status if only else status,
             "search_modes": modes,
             "selected_mode": mode,
+            "meaning_fallback": meaning_fallback,
             "edition_choices": Book.Edition.choices,
             "status_choices": Book.ReviewStatus.choices,
             "return_query": urlencode(filter_params),

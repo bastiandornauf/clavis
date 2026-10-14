@@ -32,6 +32,27 @@ def test_sources_page_shows_recent_limit(client, monkeypatch):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("status", "headline", "button"),
+    [
+        ("current", "Your library is up to date", "Sync and re-import"),
+        ("available", "Update available", "Import update"),
+        ("missing", "Sources not downloaded yet", "Download and import"),
+        ("unknown", "Couldn’t check for updates", "Sync and re-import"),
+    ],
+)
+def test_sources_update_card(client, monkeypatch, status, headline, button):
+    monkeypatch.setattr(
+        "apps.sources.views.check_for_updates",
+        lambda: UpdateCheck(status=status, message="msg", remote_sha="b" * 40),
+    )
+    body = client.get(reverse("sources:status")).content.decode()
+    assert f"update-card--{status}" in body
+    assert headline in body
+    assert button in body
+
+
+@pytest.mark.django_db
 def test_import_history_download(client):
     SourceSnapshot.objects.create(
         repo_url="https://example.test/repo",

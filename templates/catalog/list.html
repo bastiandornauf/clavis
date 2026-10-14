@@ -25,6 +25,12 @@
       Name
       <input type="search" name="q" value="{{ query }}" placeholder="Filter by name">
     </label>
+    {% if meaning_available %}
+      <label>
+        Describe
+        <input type="search" name="describe" value="{{ describe }}" placeholder="makes someone forget">
+      </label>
+    {% endif %}
     {% if entry_type == 'spell' %}
       <label>
         Tradition
@@ -144,7 +150,9 @@
   </form>
 
   <p class="filter-count" aria-live="polite">
-    {% if result_count == 0 %}
+    {% if describe %}
+      {{ result_count }} closest match{{ result_count|pluralize:"es" }} for “{{ describe }}”, best first
+    {% elif result_count == 0 %}
       0 results
     {% elif result_count == 1 %}
       1 result

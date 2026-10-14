@@ -3,6 +3,12 @@
 {% block content %}
   {% include "components/breadcrumbs.html" %}
   <h1 class="page-title">Lexicon coverage</h1>
+  {% if meaning_available %}
+    <p class="lexicon-tools">
+      <a href="{% url 'catalog:candidates' %}">Possibly missed entries</a> — sections that read like
+      recognized entries but were not caught by the rules.
+    </p>
+  {% endif %}
   <p class="meta">
     Totals: {{ counts.spell|default:0 }} spells,
     {{ counts.virtue|default:0 }} virtues,

@@ -71,6 +71,8 @@ compose those tokens rather than inventing one-off values.
 | Filters / forms | `.filter-bar`, `.stack-form` |
 | Result lists | `.result-list` (container-responsive) |
 | Reader TOC | `.toc` |
+| Reader header switches | `.reader-heading__controls`, `.view-toggle__label` |
+| Raw Markdown view (Reader toggle) | `.markdown-source` |
 | Empty / warning | `.empty-state`, `.warning` |
 | Book / lexicon grids | `.book-grid`, `.book-card` (subgrid-aligned) |
 | Gallery grid | `.gallery-jump`, `.gallery-album`, `.gallery-grid` |

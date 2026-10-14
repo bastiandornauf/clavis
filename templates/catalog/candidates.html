@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% include "components/breadcrumbs.html" %}
+  <h1 class="page-title">Possibly missed entries</h1>
+  <p class="lexicon-intro">
+    Sections the rules did not turn into any lexicon entry, but whose text reads
+    much like recognized entries of the chosen type. Some are real misses, some
+    only talk about the topic. Nothing here is added to the lexicon automatically.
+  </p>
+
+  {% if not meaning_available %}
+    <div class="empty-state">
+      This needs the meaning-search index. See <a href="{% url 'sources:status' %}">Sources</a>.
+    </div>
+  {% else %}
+    <form class="filter-bar" method="get">
+      <label>
+        Looks like
+        <select name="type" onchange="this.form.submit()">
+          {% for value, label in types %}
+            <option value="{{ value }}" {% if value == entry_type %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <noscript><button type="submit">Show</button></noscript>
+    </form>
+
+    {% if candidates %}
+      <ul class="result-list">
+        {% for candidate in candidates %}
+          <li>
+            <h2>
+              <a href="{% url 'reader:section' candidate.section.book.slug candidate.section.path %}">{{ candidate.section.display_title }}</a>
+            </h2>
+            <p class="meta">
+              {{ candidate.section.book.title }} · {{ candidate.section.path }}
+              · similarity {{ candidate.score|floatformat:2 }}
+            </p>
+            <p class="meta">{{ candidate.section.body_markdown|truncatechars:180 }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-state">No candidates for {{ entry_type_label|lower }}.</div>
+    {% endif %}
+  {% endif %}
+{% endblock %}

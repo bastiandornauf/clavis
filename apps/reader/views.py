@@ -139,17 +139,18 @@ def read_section(request: HttpRequest, book_slug: str, section_path: str) -> Htt
         {
             "section": block,
             "body_html": render_markdown(block.body_markdown),
-            "heading_level": min(block.level + 1, 6),
+            # The opened section is the page h1; subsections nest from h2 under it.
+            "heading_level": min(max(block.level - section.level + 1, 2), 6),
             "catalog_entries": catalog_by_stable.get(block.stable_id, []),
         }
         for block in blocks
     ]
 
-    similar = []
+    related = None
     if semantic_search_available():
         from apps.search.semantic import related_sections
 
-        similar = [other for other, _ in related_sections(section)]
+        related = related_sections(section)
 
     bookmarks = {b.section_stable_id for b in get_bookmarks_for_book(book)}
     notes = {n.section_stable_id: n for n in get_notes_for_book(book)}
@@ -195,7 +196,8 @@ def read_section(request: HttpRequest, book_slug: str, section_path: str) -> Htt
             "campaigns": Campaign.objects.all(),
             "catalog_entries": catalog_entries,
             "show_header_badges": show_header_badges,
-            "similar_sections": similar,
+            "similar_sections": related.similar if related else [],
+            "reprints": related.reprints if related else [],
             "back_to_search_url": back_to_search_url,
             "breadcrumbs": breadcrumbs,
             "page_title": f"{section.display_title} · {book.title}",

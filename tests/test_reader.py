@@ -54,6 +54,29 @@ def test_toc_tree_page_renders(client, fixture_markdown_dir: Path):
     assert b"Save &amp; organize" in branch.content
 
 
+@pytest.mark.django_db
+def test_branch_headings_nest_from_h2_and_markdown_source_is_available(
+    client, fixture_markdown_dir: Path
+):
+    import_sources(sync=False, local_path=fixture_markdown_dir)
+    spells = Section.objects.get(title="Spells")
+    level = Section.objects.get(title="LEVEL 20", parent=spells)
+    pilum = Section.objects.get(title="Pilum of Fire")
+    page = client.get(
+        reverse("reader:section", args=[spells.book.slug, spells.path]),
+        {"view": "branch"},
+    ).content.decode()
+
+    def heading_tag(section: Section) -> str:
+        anchor = page.index(f'id="s-{section.stable_id[:12]}"')
+        return page[page.index('<h', anchor) : page.index('<h', anchor) + 3]
+
+    assert heading_tag(level) == "<h2"
+    assert heading_tag(pilum) == "<h3"
+    assert "data-markdown-toggle" in page
+    assert 'class="markdown-source" data-markdown-source hidden' in page
+
+
 def test_br_tags_become_line_breaks():
     html = render_markdown("**Age:** 160<br>**Trait:** Bold")
     assert "&lt;br&gt;" not in html

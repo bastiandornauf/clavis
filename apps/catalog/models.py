@@ -51,6 +51,8 @@ class CatalogEntry(models.Model):
     technique = models.CharField(max_length=64, blank=True)
     form = models.CharField(max_length=64, blank=True)
     level = models.PositiveSmallIntegerField(null=True, blank=True)
+    # General spells (``Gen``) have no fixed level; distinct from "level not found".
+    level_general = models.BooleanField(default=False)
     range = models.CharField(max_length=64, blank=True)
     duration = models.CharField(max_length=64, blank=True)
     target = models.CharField(max_length=64, blank=True)

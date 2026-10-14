@@ -29,7 +29,7 @@
             <li>
               <a href="{% url 'catalog:detail' entry.entry_type entry.slug %}?book={{ entry.book.slug }}">{{ entry.name }}</a>
               <span class="meta">
-                · {% if entry.level != None %}Level {{ entry.level }}{% else %}General{% endif %}
+                {% if entry.level != None %}· Level {{ entry.level }}{% elif entry.level_general %}· General{% endif %}
                 · {{ entry.book.title }}
               </span>
             </li>

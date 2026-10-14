@@ -54,6 +54,11 @@
   {% endif %}
 
   {% if hits %}
+    {% if meaning_fallback %}
+      <p class="notice" role="status">
+        No exact matches for “{{ query }}”. These passages are close in meaning.
+      </p>
+    {% endif %}
     <p class="filter-count" aria-live="polite">
       {{ hits|length }} result{{ hits|length|pluralize }}{% if reviewed_only %} (reviewed only){% endif %}
     </p>

@@ -73,6 +73,7 @@
               {% endfor %}
             </p>
           {% endif %}
+          <div class="reader-heading__controls">
           {% if child_count or view_mode == "branch" %}
             <form class="view-toggle" method="get" action="">
               {% if request.GET.q %}<input type="hidden" name="q" value="{{ request.GET.q }}">{% endif %}
@@ -92,6 +93,11 @@
               </label>
             </form>
           {% endif %}
+            <label class="view-toggle__label" title="Show the unrendered Markdown source">
+              <input type="checkbox" data-markdown-toggle>
+              Markdown source
+            </label>
+          </div>
         </header>
 
         {% for block in blocks %}
@@ -113,11 +119,29 @@
                 </p>
               {% endif %}
             {% endif %}
-            <div class="prose">
+            <div class="prose" data-rendered>
               {{ block.body_html|safe }}
             </div>
+            <pre class="markdown-source" data-markdown-source hidden>{{ block.section.body_markdown }}</pre>
           </section>
         {% endfor %}
+        <script>
+          (function () {
+            var toggle = document.querySelector("[data-markdown-toggle]");
+            if (!toggle) return;
+            var key = "clavis.reader.markdownSource";
+            function apply(on) {
+              document.querySelectorAll("[data-rendered]").forEach(function (el) { el.hidden = on; });
+              document.querySelectorAll("[data-markdown-source]").forEach(function (el) { el.hidden = !on; });
+            }
+            toggle.checked = localStorage.getItem(key) === "1";
+            apply(toggle.checked);
+            toggle.addEventListener("change", function () {
+              localStorage.setItem(key, toggle.checked ? "1" : "0");
+              apply(toggle.checked);
+            });
+          })();
+        </script>
 
         <nav class="pager" aria-label="Section pager">
           <div>
@@ -131,6 +155,21 @@
             {% endif %}
           </div>
         </nav>
+
+        {% if reprints %}
+          <section class="similar-sections" aria-labelledby="reprint-heading">
+            <h2 id="reprint-heading">Also printed in</h2>
+            <p class="meta">Nearly the same text appears elsewhere — often a reprint or revised version.</p>
+            <ul class="result-list compact">
+              {% for other in reprints %}
+                <li>
+                  <a href="{% url 'reader:section' other.book.slug other.path %}">{{ other.display_title }}</a>
+                  <span class="meta">· {{ other.book.title }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+          </section>
+        {% endif %}
 
         {% if similar_sections %}
           <section class="similar-sections" aria-labelledby="similar-heading">

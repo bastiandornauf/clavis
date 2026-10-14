@@ -121,7 +121,7 @@ def test_sections_mentioning_excludes_definition(workshop_book: Book):
 def test_related_sections_uses_stored_vectors(workshop_book: Book):
     rebuild_embeddings_for_books([workshop_book.id])
     pilum = Section.objects.get(stable_id="ws-1")
-    related = [other.title for other, _ in related_sections(pilum)]
+    related = [other.title for other in related_sections(pilum).similar]
     assert "Pilum of Fire" not in related
     assert "Flambeau" in related
 

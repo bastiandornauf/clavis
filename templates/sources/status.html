@@ -2,50 +2,59 @@
 
 {% block content %}
   <h1 class="page-title">Sources</h1>
+
+  <section class="update-card update-card--{{ update_check.status }}" role="status" aria-labelledby="update-heading">
+    <span class="update-card__icon" aria-hidden="true">
+      {% if update_check.status == "current" %}✓{% elif update_check.status == "available" %}↑{% elif update_check.status == "missing" %}↓{% else %}!{% endif %}
+    </span>
+    <div class="update-card__body">
+      <h2 id="update-heading" class="update-card__title">
+        {% if update_check.status == "current" %}Your library is up to date
+        {% elif update_check.status == "available" %}Update available
+        {% elif update_check.status == "missing" %}Sources not downloaded yet
+        {% else %}Couldn’t check for updates{% endif %}
+      </h2>
+      <p class="update-card__message">
+        {% if update_check.status == "current" %}You have the latest Open License texts.
+        {% elif update_check.status == "available" %}{{ update_check.message }} Import it to get the latest texts.
+        {% elif update_check.status == "missing" %}{{ update_check.message }}
+        {% else %}{{ update_check.message }} Your current library still works.{% endif %}
+      </p>
+      <p class="update-card__meta">
+        {% if current %}
+          Installed <code>{{ current.commit_sha|slice:":7" }}</code>
+          · {{ current.imported_at|date:"j M Y, H:i" }}
+          · {{ current.message }}
+        {% else %}
+          No successful import yet.
+        {% endif %}
+        {% if update_check.status == "available" and update_check.remote_sha %}
+          · New <code>{{ update_check.remote_sha|slice:":7" }}</code>
+        {% endif %}
+      </p>
+    </div>
+    <form method="post" class="update-card__action">
+      {% csrf_token %}
+      {% if update_check.updates_available or update_check.status == "missing" %}
+        <button type="submit" name="action" value="import">
+          {% if update_check.status == "missing" %}Download and import{% else %}Import update{% endif %}
+        </button>
+      {% else %}
+        <button type="submit" name="action" value="import" class="secondary">Sync and re-import</button>
+      {% endif %}
+    </form>
+  </section>
+
   <p class="meta">
     Repository:
     <a href="{{ source_repo_url }}">{{ source_repo_url }}</a>
   </p>
 
-  {% if update_check.status == "available" %}
-    <p class="notice notice--update" role="status">
-      <strong>Updates available.</strong>
-      {{ update_check.message }}
-      {% if update_check.remote_sha %}
-        Remote <code>{{ update_check.remote_sha|slice:":7" }}</code>
-        {% if update_check.imported_sha %}
-          · imported <code>{{ update_check.imported_sha|slice:":7" }}</code>
-        {% endif %}
-      {% endif %}
-    </p>
-  {% elif update_check.status == "current" %}
-    <p class="meta" role="status">{{ update_check.message }}</p>
-  {% elif update_check.status == "missing" %}
-    <p class="notice" role="status">{{ update_check.message }}</p>
-  {% elif update_check.status == "unknown" %}
-    <p class="warning" role="status">Update check failed: {{ update_check.message }}</p>
-  {% endif %}
-
-  {% if current %}
-    <p class="meta">
-      Current: <code>{{ current.commit_sha }}</code> · {{ current.status }} · {{ current.imported_at }}
-      <br>{{ current.message }}
-    </p>
-  {% else %}
-    <div class="empty-state">No successful import yet.</div>
-  {% endif %}
-
-  <form method="post" class="stack-form">
-    {% csrf_token %}
-    <button type="submit" name="action" value="import">
-      {% if update_check.updates_available %}Sync and import updates{% else %}Sync and import{% endif %}
-    </button>
-  </form>
-
   <h2>Meaning search</h2>
   {% if meaning_index.complete %}
     <p class="meta" role="status">
       Ready: {{ meaning_index.vectors }} of {{ meaning_index.sections }} sections indexed
+      {% if meaning_index.chunks %}(plus {{ meaning_index.chunks }} passages from long sections){% endif %}
       with <code>{{ meaning_index.model_name }}</code> on this machine. Imports keep it current.
     </p>
   {% elif meaning_index.vectors %}

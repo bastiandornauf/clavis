@@ -10,7 +10,12 @@ from django.utils.text import slugify
 from apps.library.models import Section
 from clavis.markdown.normalize import normalize_source_markdown, unescape_markdown_text
 
-LEVEL_HEADING_RE = re.compile(r"^LEVEL\s+(\d+)\b", re.I)
+# ``LEVEL 15`` / ``LEVEL GEN`` / Core's bare ``GENERAL`` band before LEVEL 5.
+LEVEL_HEADING_RE = re.compile(
+    r"^(?:LEVEL\s+(?P<level>\d+|GEN(?:ERAL)?)\b|(?P<general>GENERAL)\s*$)", re.I
+)
+# Level after the target on the params line: ``T: Ind, Level 35, Ritual``.
+PARAMS_TAIL_LEVEL_RE = re.compile(r",\s*\**Level\s+(?P<level>\d+|Gen(?:eral)?)\b", re.I)
 SPELL_PARAMS_RE = re.compile(
     r"^R:\s*(?P<range>[^,;\n]+?),\s*D:\s*(?P<duration>[^,;\n]+?),\s*T:\s*(?P<target>[^,<\n]+)",
     re.I | re.M,
@@ -20,7 +25,7 @@ SPELL_PARAMS_BOLD_RE = re.compile(
     r"^(?:>\s*)?\*\*R:\*\*\s*(?P<range>[^,;\n]+?),\s*"
     r"\*\*D:\*\*\s*(?P<duration>[^,;\n]+?),\s*"
     r"\*\*T:\*\*\s*(?P<target>[^,;\n*]+)"
-    r"(?:,\s*\*\*Level\s+(?P<level>\d+)\*\*)?",
+    r"(?:,\s*\*\*Level\s+(?P<level>\d+|Gen(?:eral)?)\*\*)?",
     re.I | re.M,
 )
 # Callout spell name: ``>**MY NEW BEST FRIEND**`` or ``> #### Title`` then bold name.
@@ -41,9 +46,17 @@ TECHNIQUE_FORM_RE = re.compile(
 SPELL_ART_LEAD_RE = re.compile(
     r"^\**\s*(?P<tech>Cr|In|Mu|Pe|Re)(?:\s*\([A-Za-z, ]+\))?"
     r"(?P<form>An|Aq|Au|Co|He|Ig|[Il]m|Me|Te|Vi)"
-    r"(?:\s*\([A-Za-z, ]+\))?\s+(?:Level\s+)?(?P<level>\d+|Gen(?:eral)?)\b",
+    r"(?:\s*\([A-Za-z, ]+\))?\**\s+(?:Level\s+)?(?P<level>\d+|Gen(?:eral)?)\b",
     re.M,
 )
+# Only trusted after an art lead opens the section: R/D/T on the lead line, or with
+# slips like ``R: Touch D: Sun, T Room`` (missing comma / colon).
+SPELL_PARAMS_LENIENT_RE = re.compile(
+    r"\bR:\s*(?P<range>[^,;\n]+?),?\s+D:\s*(?P<duration>[^,;\n]+?),\s*T:?\s+"
+    r"(?P<target>[^,<\n]+)",
+    re.I,
+)
+ART_LEAD_PARAM_WINDOW = 320
 # Creature / character powers share R/D/T lines but are not spells:
 # ``1 point, Init: Qik–1, Animal`` · ``Corpus, Pen +0, 1 use/day``.
 POWER_LEAD_RE = re.compile(
@@ -54,7 +67,15 @@ POWER_LEAD_RE = re.compile(
 # Non-Hermetic spell leads: ``Level 10`` (Amazons), ``Aloe 30`` (Soqotra),
 # ``Evocation/Beguile 15`` (faerie wizardry), ``Threads of Fate Ease Factor 30``.
 FOREIGN_SPELL_LEAD_RE = re.compile(
-    r"^\**\s*(?P<label>[A-Z][A-Za-z'/ ]{1,40}?)\s+(?:Ease Factor\s+)?(?:\d+|General)\b",
+    r"^\**\s*(?P<label>[A-Z][A-Za-z'/ ]{1,40}?)\s+(?P<ease>Ease Factor\s+)?"
+    r"(?P<level>\d+|General)\b",
+    re.M,
+)
+# Full-name lead: ``Rego Herbam (Animal) 15`` (enchanted device effects).
+FULL_ART_LEAD_RE = re.compile(
+    r"^\**\s*(?P<tech>Creo|Intellego|Muto|Perdo|Rego)(?:\s*\([A-Za-z, ]+\))?\s+"
+    r"(?P<form>Animal|Aquam|Auram|Corpus|Herbam|Ignem|Imaginem|Mentem|Terram|Vim)"
+    r"(?:\s*\([A-Za-z, ]+\))?\**\s+(?:Level\s+)?(?P<level>\d+|Gen(?:eral)?)\b",
     re.M,
 )
 NON_HERMETIC = "Non-Hermetic"
@@ -286,6 +307,7 @@ class ExtractedEntry:
     technique: str = ""
     form: str = ""
     level: int | None = None
+    level_general: bool = False
     range: str = ""
     duration: str = ""
     target: str = ""
@@ -298,18 +320,31 @@ def _clean_body(body: str) -> str:
     return normalize_source_markdown(body)
 
 
+NEW_TYPE_PREFIX_RE = re.compile(
+    r"^New\s+(?:Spells?|Abilit(?:y|ies)|Virtues?|Flaws?|Items?|Rituals?)\s*:\s*", re.I
+)
+
+
 def _section_title(section: Section) -> str:
-    return unescape_markdown_text(section.title.strip())
+    """Display title without a ``New Spell:`` style prefix (may become empty)."""
+    return NEW_TYPE_PREFIX_RE.sub("", unescape_markdown_text(section.title.strip()))
 
 
-def _parent_level(section: Section) -> int | None:
+def _level_token(token: str) -> tuple[int | None, bool]:
+    """``"15"`` → (15, False); ``"Gen"`` / ``"General"`` → (None, True)."""
+    return (int(token), False) if token.isdigit() else (None, True)
+
+
+def _parent_level(section: Section) -> tuple[int | None, bool]:
     current = section.parent
     while current is not None:
         match = LEVEL_HEADING_RE.match(current.title.strip())
         if match:
-            return int(match.group(1))
+            if match.group("general"):
+                return None, True
+            return _level_token(match.group("level"))
         current = current.parent
-    return None
+    return None, False
 
 
 def _parent_technique_form(section: Section) -> tuple[str, str]:
@@ -325,8 +360,16 @@ def _parent_technique_form(section: Section) -> tuple[str, str]:
 _PAREN_RE = re.compile(r"\(([^()]*(?:\([^()]*\)[^()]*)*)\)")
 
 
-def _art_lead(text: str) -> tuple[str, str, int | None]:
-    """Technique, form and level from an abbreviated lead like ``MuCo 5``.
+@dataclass
+class _ArtLead:
+    technique: str = ""
+    form: str = ""
+    level: int | None = None
+    general: bool = False
+
+
+def _art_lead(text: str) -> _ArtLead:
+    """Technique, form and level from a lead like ``MuCo 5`` or ``Rego Herbam 15``.
 
     Also checks parentheses: ``Air of Friendly Magic (MuVi 30)``.
     """
@@ -336,14 +379,16 @@ def _art_lead(text: str) -> tuple[str, str, int | None]:
             match = SPELL_ART_LEAD_RE.match(inner.group(1).strip())
             if match:
                 break
-    if not match:
-        return "", "", None
-    level = int(match.group("level")) if match.group("level").isdigit() else None
-    return (
-        TECHNIQUE_ABBREVIATIONS[match.group("tech")],
-        FORM_ABBREVIATIONS[match.group("form")],
-        level,
-    )
+    if match:
+        technique = TECHNIQUE_ABBREVIATIONS[match.group("tech")]
+        form = FORM_ABBREVIATIONS[match.group("form")]
+    else:
+        match = FULL_ART_LEAD_RE.search(text)
+        if not match:
+            return _ArtLead()
+        technique, form = match.group("tech").title(), match.group("form").title()
+    level, general = _level_token(match.group("level"))
+    return _ArtLead(technique, form, level, general)
 
 
 def _spell_entry(
@@ -354,10 +399,11 @@ def _spell_entry(
     technique: str = "",
     form: str = "",
     level: int | None = None,
+    general: bool = False,
     tradition: str = "",
 ) -> ExtractedEntry:
-    if level is None and params.groupdict().get("level"):
-        level = int(params.group("level"))
+    if level is None and not general and params.groupdict().get("level"):
+        level, general = _level_token(params.group("level"))
     summary_bits: list[str] = []
     if tradition:
         summary_bits.append(tradition)
@@ -365,6 +411,8 @@ def _spell_entry(
         summary_bits.append(f"{technique} {form}")
     if level is not None:
         summary_bits.append(f"Level {level}")
+    elif general:
+        summary_bits.append("Level General")
     summary_bits.extend(
         [
             f"R: {params.group('range').strip()}",
@@ -381,6 +429,7 @@ def _spell_entry(
         technique=technique,
         form=form,
         level=level,
+        level_general=general,
         range=params.group("range").strip(),
         duration=params.group("duration").strip(),
         target=params.group("target").strip(),
@@ -395,31 +444,47 @@ def extract_spell(section: Section) -> ExtractedEntry | None:
         return None
     if SKIP_TITLE_RE.match(_section_title(section)):
         return None
-    if section.level < 3:
+    # A section that opens with ``MuMe 10`` / ``ReVi Gen`` is a spell writeup even
+    # when its R/D/T line is bold, inline, or sloppy.
+    first_line = body.lstrip().split("\n", 1)[0]
+    opens_with_art = bool(
+        SPELL_ART_LEAD_RE.match(first_line) or FULL_ART_LEAD_RE.match(first_line)
+    )
+    if section.level < 3 and not opens_with_art:
         return None
 
     head = body[:SPELL_PARAM_WINDOW]
-    # Classic section-as-spell only (plain R:/D:/T:). Bold callouts are harvested
+    # Classic section-as-spell (plain R:/D:/T:). Other bold callouts are harvested
     # separately so narrative sections like "Magi" are not mislabeled as spells.
     params = SPELL_PARAMS_RE.search(head)
+    if not params and opens_with_art:
+        art_head = body[:ART_LEAD_PARAM_WINDOW]
+        params = SPELL_PARAMS_BOLD_RE.search(art_head) or SPELL_PARAMS_LENIENT_RE.search(
+            art_head
+        )
     if not params:
         return None
 
-    level = _parent_level(section)
+    level, general = _parent_level(section)
     technique, form = _parent_technique_form(section)
     lead = head[: params.start()]
-    lead_tech, lead_form, lead_level = _art_lead(lead)
-    if not lead_tech:
-        lead_tech, lead_form, lead_level = _art_lead(_section_title(section))
+    art = _art_lead(lead)
+    if not art.technique:
+        art = _art_lead(_section_title(section))
     if not technique or not form:
-        technique, form = lead_tech, lead_form
+        technique, form = art.technique, art.form
     if not technique or not form:
         tf = TECHNIQUE_FORM_RE.search(body[:800])
         if tf:
             technique = tf.group("tech").title()
             form = tf.group("form").title()
-    if level is None:
-        level = lead_level
+    if level is None and not general:
+        level, general = art.level, art.general
+    if level is None and not general:
+        line_end = body.find("\n", params.end())
+        tail = PARAMS_TAIL_LEVEL_RE.search(body[params.end() : line_end if line_end >= 0 else None])
+        if tail:
+            level, general = _level_token(tail.group("level"))
 
     tradition = ""
     if not (technique and form):
@@ -429,10 +494,12 @@ def extract_spell(section: Section) -> ExtractedEntry | None:
         foreign = FOREIGN_SPELL_LEAD_RE.search(lead)
         if foreign and foreign.group("label").strip().lower() != "general":
             tradition = NON_HERMETIC
+            if level is None and not foreign.group("ease") and foreign.group("level").isdigit():
+                level = int(foreign.group("level"))
 
     # Prefer true formulaic spell writeups: LEVEL parent and/or Tech+Form.
     # Bare R/D/T later in creature powers is already excluded by the window.
-    if level is None and not (technique and form):
+    if level is None and not general and not (technique and form):
         # Still accept classic writeups that open with R/D/T under a named spell
         # heading (some books omit LEVEL wrappers).
         if not params.start() <= 40:
@@ -445,6 +512,7 @@ def extract_spell(section: Section) -> ExtractedEntry | None:
         technique=technique,
         form=form,
         level=level,
+        general=general,
         tradition=tradition,
     )
 
@@ -482,9 +550,9 @@ def extract_blockquote_spells(section: Section) -> list[ExtractedEntry]:
         if key in seen:
             continue
         head_chunk = prefix[-200:] + body[params.start() : params.start() + 200]
-        lead_tech, lead_form, lead_level = _art_lead(prefix[-120:])
-        if not (technique and form) and lead_tech:
-            technique, form = lead_tech, lead_form
+        art = _art_lead(prefix[-120:])
+        if not (technique and form) and art.technique:
+            technique, form = art.technique, art.form
         tf = TECHNIQUE_FORM_RE.search(head_chunk)
         if tf:
             technique = technique or tf.group("tech").title()
@@ -499,7 +567,8 @@ def extract_blockquote_spells(section: Section) -> list[ExtractedEntry]:
                 params=params,
                 technique=technique,
                 form=form,
-                level=None if params.groupdict().get("level") else lead_level,
+                level=None if params.groupdict().get("level") else art.level,
+                general=False if params.groupdict().get("level") else art.general,
             )
         )
     return found
@@ -1048,7 +1117,74 @@ def extract_ability(section: Section) -> ExtractedEntry | None:
     )
 
 
+BOX_HEADING_RE = re.compile(r"^>\s*#{1,6}\s+(?P<title>.+?)\s*#*\s*$")
+BOX_QUOTE_RE = re.compile(r"^>\s?")
+
+
+def boxed_sections(section: Section) -> list[Section]:
+    """Titled ``> ### Heading`` boxes as unsaved pseudo-sections.
+
+    The importer only splits on unquoted headings, so a box stays inside its
+    section. Unquoting each titled box lets every rule read it like a real
+    subsection; entries still point at the enclosing section.
+    """
+    boxes: list[Section] = []
+    title: str | None = None
+    lines: list[str] = []
+
+    def close() -> None:
+        body = "\n".join(lines).strip()
+        if title and body:
+            boxes.append(
+                Section(
+                    book=section.book,
+                    parent=section,
+                    level=min(section.level + 1, 6),
+                    title=title,
+                    slug=section.slug,
+                    path=section.path,
+                    body_markdown=body,
+                    content_hash=section.content_hash,
+                    stable_id=section.stable_id,
+                    position=section.position,
+                )
+            )
+
+    for line in (section.body_markdown or "").splitlines():
+        if line.startswith(">"):
+            heading = BOX_HEADING_RE.match(line)
+            if heading:
+                close()
+                title = heading.group("title").strip("* ").strip() or None
+                lines = []
+            elif title is not None:
+                lines.append(BOX_QUOTE_RE.sub("", line, count=1))
+        elif not line.strip():
+            if title is not None:
+                lines.append("")
+        else:
+            close()
+            title, lines = None, []
+    close()
+    return boxes
+
+
 def extract_from_section(section: Section) -> list[ExtractedEntry]:
+    """Entries of a section plus those of its titled boxes (deduplicated)."""
+    entries = _extract_section_entries(section)
+    seen = {(entry.entry_type, entry.name.casefold()) for entry in entries}
+    for box in boxed_sections(section):
+        for entry in _extract_section_entries(box):
+            key = (entry.entry_type, entry.name.casefold())
+            if key in seen:
+                continue
+            seen.add(key)
+            entry.section = section
+            entries.append(entry)
+    return [entry for entry in entries if entry.name.strip()]
+
+
+def _extract_section_entries(section: Section) -> list[ExtractedEntry]:
     # Imported here to keep saga patterns in a dedicated module without cycles
     # at import time for the helpers above.
     from apps.catalog.saga_extractors import (
@@ -1068,11 +1204,17 @@ def extract_from_section(section: Section) -> list[ExtractedEntry]:
     if guidelines:
         return guidelines
 
-    # Dedicated spell sections win exclusively; callout spells merge with other types.
+    # Dedicated spell sections win over other section types, but an enchanted item
+    # whose effect reads like a spell keeps its item entry, and boxed creatures stay.
     primary_spell = extract_spell(section)
     boxed_spells = extract_blockquote_spells(section)
     if primary_spell is not None:
-        return extract_spells(section)
+        item = extract_item(section)
+        return [
+            *([item] if item else []),
+            *extract_spells(section),
+            *extract_blockquote_creatures(section),
+        ]
 
     vf = extract_virtues_and_flaws(section)
     if vf:

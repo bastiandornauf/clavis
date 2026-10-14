@@ -40,6 +40,7 @@ def rebuild_catalog_for_books(book_ids: list[int]) -> int:
                     technique=extracted.technique,
                     form=extracted.form,
                     level=extracted.level,
+                    level_general=extracted.level_general,
                     range=extracted.range,
                     duration=extracted.duration,
                     target=extracted.target,
@@ -189,7 +190,11 @@ def workshop_cell(
     guidelines = list(
         base.filter(entry_type=CatalogEntry.EntryType.GUIDELINE).order_by("level", "name")
     )
-    spells = list(base.filter(entry_type=CatalogEntry.EntryType.SPELL).order_by("level", "name"))
+    spells = list(
+        base.filter(entry_type=CatalogEntry.EntryType.SPELL).order_by(
+            "-level_general", "level", "name"
+        )
+    )
     return guidelines, spells
 
 

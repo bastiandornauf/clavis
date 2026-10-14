@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from apps.catalog.extractors import NON_HERMETIC, extract_spell
+from apps.catalog.extractors import NON_HERMETIC, extract_from_section, extract_spell
 from apps.library.models import Book, Section
 from apps.sources.models import SourceSnapshot
 
@@ -59,6 +59,91 @@ def test_abbreviated_art_lead(book: Book, lead, technique, form, level):
     spell = extract_spell(section)
     assert spell is not None
     assert (spell.technique, spell.form, spell.level) == (technique, form, level)
+    assert spell.level_general == (level is None)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("title", "body", "expected"),
+    [
+        (
+            "Absent Mind of the Scholar",
+            "**MuMe** 10\n\n**R:** Touch, **D:** Sun, **T:** Individual\n\nChanges memory.",
+            ("Muto", "Mentem", 10, False, "Touch", "Individual"),
+        ),
+        (
+            "Fingers for Eyes",
+            "**InIm** 5\n\n**R:** Touch, **D:** Diameter, **T:** Room\n\nSee the Room.",
+            ("Intellego", "Imaginem", 5, False, "Touch", "Room"),
+        ),
+        (
+            "Aura of Beguiling Appearance",
+            "MuIm 15 Pen 0, 12/day R: Touch, D: Sun, T: Ind\n\nA variant of the spell.",
+            ("Muto", "Imaginem", 15, False, "Touch", "Ind"),
+        ),
+        (
+            "Sense the Airy Trespass",
+            "InVi 50  \nPenetration +32, constant effect   \nR: Touch D: Sun, T Room  \n"
+            "This enchantment detects entities.",
+            ("Intellego", "Vim", 50, False, "Touch", "Room"),
+        ),
+        (
+            "Wrappings of Metaphysical Iron",
+            "ReVi Gen R: Touch, D: Sun, T: Individual\n\nThis spell wards an object.",
+            ("Rego", "Vim", None, True, "Touch", "Individual"),
+        ),
+    ],
+)
+def test_art_led_writeups_with_odd_param_lines(book: Book, title, body, expected):
+    spell = extract_spell(_section(book, title, body))
+    assert spell is not None
+    assert (
+        spell.technique,
+        spell.form,
+        spell.level,
+        spell.level_general,
+        spell.range,
+        spell.target.strip(),
+    ) == expected
+
+
+@pytest.mark.django_db
+def test_top_level_section_needs_art_lead(book: Book):
+    section = _section(book, "Overview", "R: Touch, D: Sun, T: Ind\n\nNot a spell heading.")
+    section.level = 1
+    assert extract_spell(section) is None
+    section.body_markdown = "ReVi Gen R: Touch, D: Sun, T: Individual\n\nWards an object."
+    assert extract_spell(section) is not None
+
+
+@pytest.mark.django_db
+def test_general_level_heading(book: Book):
+    band = _section(book, "GENERAL", "")
+    spell = _section(book, "Aegis of the Hearth", "R: Touch, D: Year, T: Bound, Ritual\n\nWards.")
+    spell.parent = band
+    spell.save()
+    entry = extract_spell(spell)
+    assert entry.level is None and entry.level_general
+
+
+@pytest.mark.django_db
+def test_level_after_target(book: Book):
+    section = _section(
+        book,
+        "(Mental Characteristic) of the Sage",
+        "R: Touch, D: Mom, T: Ind, Level 35, Ritual\n\nFour variations.",
+    )
+    assert extract_spell(section).level == 35
+
+
+@pytest.mark.django_db
+def test_narrative_bold_params_without_art_lead_stay_out(book: Book):
+    section = _section(
+        book,
+        "Magi",
+        "**Henri de Tours**\n\n**R:** Eye, **D:** Sun, **T:** Individual, **Level 25**\n\nTrades.",
+    )
+    assert extract_spell(section) is None
 
 
 @pytest.mark.django_db
@@ -110,3 +195,16 @@ def test_lowercase_prose_is_not_an_art_lead(book: Book):
     )
     spell = extract_spell(section)
     assert spell is None or spell.technique == ""
+
+
+@pytest.mark.django_db
+def test_enchanted_item_with_spell_style_effect_keeps_item(book: Book):
+    section = _section(
+        book,
+        "Vermin Ward",
+        "**ReAn** 24  \n**Pen** +0, constant effect  \n**R:** Touch, **D:** Sun, "
+        "**T:** Structure\n\nThis enchanted item, a carved statue of a rat, keeps "
+        "animals out.\n\n(Base 2, +1 Touch, +2 Sun, +3 Structure; +4 Constant Effect)",
+    )
+    types = sorted(entry.entry_type for entry in extract_from_section(section))
+    assert types == ["item", "spell"]

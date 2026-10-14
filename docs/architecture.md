@@ -51,13 +51,22 @@ still resolve.
 
 ## Catalog coverage (Tier A shipped)
 
-Rules currently recognize:
+Rules currently recognize the types below in sections and in titled boxes
+(`> ### Heading` stays inside its section on import; `boxed_sections` unquotes each
+box so all rules read it like a subsection, entries point at the enclosing
+section). `New Spell:` style title prefixes are dropped from entry names.
 
 - **Spells** — section body with `R:/D:/T:` params; level from parent `LEVEL N` heading
   or an abbreviated lead (`MuCo 5`, `Re(Cr)Te 20`, `CrIg Level 15`, `(MuVi 30)` in
-  the title). Creature/character powers (`1 point, Init …`, `Pen +0, 1 use/day`)
+  the title). General spells (`ReVi Gen`, `GENERAL` heading) set `level_general`
+  instead of a number. A section that opens with an art lead also accepts bold,
+  same-line, or sloppy R/D/T (`R: Touch D: Sun, T Room`). Creature/character powers (`1 point, Init …`, `Pen +0, 1 use/day`)
   are not spells. Clear foreign leads (`Level 10`, `Evocation/Beguile 15`) get
   `category=Non-Hermetic`; unclear stays empty.
+- **Enchanted items** — `Talisman:` / `Invested Device:` headings, device effect
+  sections with a use line (`Pen +0, 6/day`, `24 uses per day`, `constant effect`;
+  use and Te/Fo/level kept), and `This enchanted item …` writeups. Theurgy
+  "Example … Effects" are not devices. An effect section is both item and spell.
 - **Spell workshop** (`/lexicon/workshop/`) — Technique × Form grid of Hermetic
   spells and guidelines; guideline tables with wrapped `•` cells are rejoined.
 - **Virtues / Flaws** — classic `*Major/Minor, Category*`, category-first italics (`*Social Status, Major*`), plain `Major/Minor … Virtue/Flaw`, and bold-packed blocks under Virtues/Flaws chapter headings
@@ -78,6 +87,10 @@ Heading titles decode CommonMark escapes (`Ceremony\*` → `Ceremony*`) for disp
 - **Embeddings (meaning search)** — `rebuild_embeddings` runs the local ONNX model
   `BAAI/bge-small-en-v1.5` via fastembed (384 dims, title + first ~2000 chars per
   section; model cached in `CLAVIS_DATA_DIR/cache/models`, offline afterwards).
+  Long sections also get `SectionChunkEmbedding` rows for the rest of the body
+  (~1500-char overlapping chunks with body offsets). Meaning search scores a
+  section by its best vector and shows the matching chunk as the snippet;
+  similar passages, reprints and candidates use the section vector only.
   Rows are saved per batch; reruns skip unchanged sections and re-imports copy
   vectors by `content_hash`. Search shows Keyword / Meaning / Keyword + meaning
   only once vectors for the active model exist (`semantic_search_available`).
@@ -85,6 +98,16 @@ Heading titles decode CommonMark escapes (`Ceremony\*` → `Ceremony*`) for disp
   the dependency-free test backend and never enables the UI on its own.
   The Reader's **Similar passages** reuse the section's stored vector (no model
   load). Sources shows index status.
+- **Built on the index** (`apps.search.semantic` primitives `active_index`,
+  `rank_sections`; Lexicon logic in `apps.catalog.similarity`):
+  - *Also printed in* — near-identical text in another book (≥0.97, or ≥0.95 with
+    the same title); shown in Reader and Lexicon detail.
+  - *Describe* filter on Lexicon lists — ranks entries of that type by meaning.
+  - *Similar entries* on Lexicon detail — same type, other sections.
+  - *Possibly missed entries* (`/lexicon/coverage/missed/`) — sections without any
+    entry that read like known entries of a type (mean of 3 nearest). Review aid
+    only; never writes to the lexicon.
+  - Keyword search with zero hits falls back to meaning results, labelled as such.
 - **Mentioned in** — Lexicon detail runs an exact-phrase FTS lookup of the entry
   name (`sections_mentioning`), skipping guidelines, story seeds, and generic
   one-word names.

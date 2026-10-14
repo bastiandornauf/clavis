@@ -17,9 +17,10 @@ from functools import lru_cache
 from typing import Protocol
 
 from django.conf import settings
+from django.db import transaction
 
 from apps.library.models import Section
-from apps.search.models import SectionEmbedding
+from apps.search.models import SectionChunkEmbedding, SectionEmbedding
 from apps.sources.models import SourceSnapshot
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,12 @@ DEFAULT_LOCAL_MODEL = "BAAI/bge-small-en-v1.5"
 # The model reads at most ~512 tokens; longer text only costs time.
 EMBED_TEXT_CHARS = 2000
 EMBED_BATCH_SIZE = 64
+# Long sections: the tail past the section vector is split into overlapping
+# chunks (raw-body offsets; markup makes raw text longer than the cleaned window).
+CHUNK_FIRST_START = 1800
+CHUNK_CHARS = 1500
+CHUNK_STEP = 1300
+CHUNK_MIN_CHARS = 200
 
 
 class Embedder(Protocol):
@@ -146,15 +153,25 @@ def index_status() -> dict[str, object]:
     current = SourceSnapshot.current()
     model_name = active_model_name()
     if not current:
-        return {"model_name": model_name, "vectors": 0, "sections": 0, "complete": False}
+        return {
+            "model_name": model_name,
+            "vectors": 0,
+            "sections": 0,
+            "chunks": 0,
+            "complete": False,
+        }
     sections = Section.objects.filter(book__snapshot=current).count()
     vectors = SectionEmbedding.objects.filter(
+        model_name=model_name, book__snapshot=current
+    ).count()
+    chunks = SectionChunkEmbedding.objects.filter(
         model_name=model_name, book__snapshot=current
     ).count()
     return {
         "model_name": model_name.removeprefix("local:"),
         "vectors": vectors,
         "sections": sections,
+        "chunks": chunks,
         "complete": bool(sections) and vectors >= sections,
         "available": semantic_search_available(),
     }
@@ -178,10 +195,38 @@ def refresh_embeddings_after_import(book_ids: list[int]) -> int:
         return 0
 
 
+def _plain(text: str) -> str:
+    return re.sub(r"\s+", " ", _MARKUP_RE.sub(" ", text)).strip()
+
+
 def section_embed_text(section: Section) -> str:
-    body = _MARKUP_RE.sub(" ", section.body_markdown or "")
-    body = re.sub(r"\s+", " ", body).strip()
-    return f"{section.display_title}\n{body[:EMBED_TEXT_CHARS]}"
+    return f"{section.display_title}\n{_plain(section.body_markdown or '')[:EMBED_TEXT_CHARS]}"
+
+
+def section_chunks(section: Section) -> list[tuple[int, int, str]]:
+    """``(start, end, embed_text)`` for the tail of a long section, else empty.
+
+    Chunk edges snap to whitespace so words are not cut; the title is prefixed so
+    each chunk keeps its context.
+    """
+    body = section.body_markdown or ""
+    chunks: list[tuple[int, int, str]] = []
+    start = CHUNK_FIRST_START
+    while len(body) - start >= CHUNK_MIN_CHARS:
+        if start and not body[start - 1].isspace():
+            space = body.find(" ", start, start + 80)
+            start = space + 1 if space >= 0 else start
+        end = min(len(body), start + CHUNK_CHARS)
+        if end < len(body):
+            space = body.rfind(" ", end - 80, end)
+            end = space if space > start else end
+        text = _plain(body[start:end])
+        if text:
+            chunks.append((start, end, f"{section.display_title}\n{text}"))
+        if end >= len(body):
+            break
+        start += CHUNK_STEP
+    return chunks
 
 
 def rebuild_embeddings_for_books(
@@ -189,6 +234,7 @@ def rebuild_embeddings_for_books(
     *,
     embedder: Embedder | None = None,
     progress: Callable[[int, int], None] | None = None,
+    chunk_progress: Callable[[int, int], None] | None = None,
 ) -> int:
     """Embed changed sections; reuse vectors whose content hash is unchanged.
 
@@ -274,4 +320,117 @@ def rebuild_embeddings_for_books(
         len(pending) - total,
         len(sections) - len(pending),
     )
+    rebuild_chunk_embeddings_for_books(book_ids, embedder=embedder, progress=chunk_progress)
     return len(pending)
+
+
+def rebuild_chunk_embeddings_for_books(
+    book_ids: list[int],
+    *,
+    embedder: Embedder | None = None,
+    progress: Callable[[int, int], None] | None = None,
+) -> int:
+    """Embed the tails of long sections; same reuse/resume rules as section vectors.
+
+    Returns the number of chunks embedded (reused chunks are copied, not counted).
+    """
+    if not book_ids:
+        return 0
+    embedder = embedder or get_embedder()
+    model = embedder.model_name
+    sections = list(
+        Section.objects.filter(book_id__in=book_ids).only(
+            "id", "book_id", "title", "body_markdown", "content_hash"
+        )
+    )
+    stored: dict[int, tuple[str, int]] = {}
+    for section_id, content_hash, dimensions in SectionChunkEmbedding.objects.filter(
+        book_id__in=book_ids, model_name=model
+    ).values_list("section_id", "content_hash", "dimensions"):
+        stored[section_id] = (content_hash, dimensions)
+
+    def is_long(section: Section) -> bool:
+        return len(section.body_markdown or "") - CHUNK_FIRST_START >= CHUNK_MIN_CHARS
+
+    stale = {
+        s.id
+        for s in sections
+        if s.id in stored
+        and (not is_long(s) or stored[s.id] != (s.content_hash, embedder.dimensions))
+    }
+    SectionChunkEmbedding.objects.filter(section_id__in=stale, model_name=model).delete()
+    pending = [s for s in sections if is_long(s) and (s.id not in stored or s.id in stale)]
+
+    reusable: dict[str, list[SectionChunkEmbedding]] = {}
+    hashes = {s.content_hash for s in pending}
+    if hashes:
+        for row in SectionChunkEmbedding.objects.filter(
+            model_name=model, dimensions=embedder.dimensions, content_hash__in=hashes
+        ).order_by("section_id", "chunk_index"):
+            group = reusable.setdefault(row.content_hash, [])
+            if not group or group[0].section_id == row.section_id:
+                group.append(row)
+
+    def save(section: Section, rows: list[tuple[int, int, bytes]]) -> list[SectionChunkEmbedding]:
+        return [
+            SectionChunkEmbedding(
+                section_id=section.id,
+                book_id=section.book_id,
+                model_name=model,
+                content_hash=section.content_hash,
+                chunk_index=index,
+                start=start,
+                end=end,
+                vector=vector,
+                dimensions=embedder.dimensions,
+            )
+            for index, (start, end, vector) in enumerate(rows)
+        ]
+
+    copies: list[SectionChunkEmbedding] = []
+    to_embed: list[Section] = []
+    for section in pending:
+        group = reusable.get(section.content_hash)
+        if group:
+            copies.extend(save(section, [(r.start, r.end, bytes(r.vector)) for r in group]))
+        else:
+            to_embed.append(section)
+    SectionChunkEmbedding.objects.bulk_create(copies, batch_size=1000)
+
+    work = [(section, section_chunks(section)) for section in to_embed]
+    total = sum(len(chunks) for _, chunks in work)
+    done = 0
+    batch: list[tuple[Section, list[tuple[int, int, str]]]] = []
+    batch_size = 0
+
+    # Saved per group of whole sections so an interrupted run resumes cleanly.
+    def flush() -> None:
+        nonlocal done, batch, batch_size
+        if not batch:
+            return
+        texts = [text for _, chunks in batch for _, _, text in chunks]
+        vectors = iter(embedder.embed_documents(texts))
+        rows: list[SectionChunkEmbedding] = []
+        for section, chunks in batch:
+            rows.extend(save(section, [(start, end, next(vectors)) for start, end, _ in chunks]))
+        with transaction.atomic():
+            SectionChunkEmbedding.objects.bulk_create(rows, batch_size=1000)
+        done += batch_size
+        batch, batch_size = [], 0
+        if progress:
+            progress(done, total)
+
+    for section, chunks in work:
+        if not chunks:
+            continue
+        batch.append((section, chunks))
+        batch_size += len(chunks)
+        if batch_size >= EMBED_BATCH_SIZE * 4:
+            flush()
+    flush()
+
+    SectionChunkEmbedding.objects.filter(book_id__in=book_ids).exclude(model_name=model).delete()
+    logger.info(
+        "Chunk embeddings %s: %s embedded, %s reused", model, total, len(copies)
+    )
+    return total

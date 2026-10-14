@@ -33,12 +33,16 @@
     {% elif entry.entry_type == "organization" %}
       {% if entry.category %}<div><dt>Kind</dt><dd>{{ entry.category }}</dd></div>{% endif %}
       {% if entry.form %}<div><dt>House</dt><dd>{{ entry.form }}</dd></div>{% endif %}
-    {% elif entry.entry_type == "place" or entry.entry_type == "item" %}
+    {% elif entry.entry_type == "item" %}
+      {% if entry.category %}<div><dt>Use</dt><dd>{{ entry.category }}</dd></div>{% endif %}
+      {% if entry.technique %}<div><dt>Effect</dt><dd>{{ entry.technique }} {{ entry.form }}{% if entry.level != None %} {{ entry.level }}{% endif %}</dd></div>{% endif %}
+    {% elif entry.entry_type == "place" %}
       {% if entry.category %}<div><dt>Kind</dt><dd>{{ entry.category }}</dd></div>{% endif %}
     {% else %}
       {% if entry.technique %}<div><dt>Technique</dt><dd>{{ entry.technique }}</dd></div>{% endif %}
       {% if entry.form %}<div><dt>Form</dt><dd>{{ entry.form }}</dd></div>{% endif %}
-      {% if entry.level != None %}<div><dt>Level</dt><dd>{{ entry.level }}</dd></div>{% endif %}
+      {% if entry.level != None %}<div><dt>Level</dt><dd>{{ entry.level }}</dd></div>
+      {% elif entry.level_general %}<div><dt>Level</dt><dd>General</dd></div>{% endif %}
       {% if entry.range %}<div><dt>Range</dt><dd>{{ entry.range }}</dd></div>{% endif %}
       {% if entry.duration %}<div><dt>Duration</dt><dd>{{ entry.duration }}</dd></div>{% endif %}
       {% if entry.target %}<div><dt>Target</dt><dd>{{ entry.target }}</dd></div>{% endif %}
@@ -72,6 +76,31 @@
         <li>
           <a href="{% url 'catalog:detail' item.entry_type item.slug %}?book={{ item.book.slug }}">{{ item.book.title }}</a>
           <span class="meta">· {{ item.section_path }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if reprints %}
+    <h2>Also printed in</h2>
+    <p class="meta">Nearly the same text appears elsewhere — often a reprint or revised version.</p>
+    <ul class="result-list compact">
+      {% for other in reprints %}
+        <li>
+          <a href="{% url 'reader:section' other.book.slug other.path %}">{{ other.display_title }}</a>
+          <span class="meta">· {{ other.book.title }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if similar_entries %}
+    <h2>Similar {{ entry.get_entry_type_display|lower }}s</h2>
+    <ul class="result-list compact">
+      {% for other in similar_entries %}
+        <li>
+          <a href="{% url 'catalog:detail' other.entry_type other.slug %}?book={{ other.book.slug }}">{{ other.name }}</a>
+          <span class="meta">· {% if other.summary %}{{ other.summary }} · {% endif %}{{ other.book.title }}</span>
         </li>
       {% endfor %}
     </ul>

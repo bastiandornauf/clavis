@@ -47,11 +47,19 @@ class Command(BaseCommand):
         except (ValueError, ImportError) as exc:
             raise CommandError(str(exc)) from exc
 
-        def progress(done: int, total: int) -> None:
-            self.stdout.write(f"  embedded {done}/{total} sections", ending="\r")
-            self.stdout.flush()
+        def reporter(label: str):
+            def progress(done: int, total: int) -> None:
+                self.stdout.write(f"  embedded {done}/{total} {label}", ending="\r")
+                self.stdout.flush()
 
-        updated = rebuild_embeddings_for_books(book_ids, embedder=embedder, progress=progress)
+            return progress
+
+        updated = rebuild_embeddings_for_books(
+            book_ids,
+            embedder=embedder,
+            progress=reporter("sections"),
+            chunk_progress=reporter("long-text passages"),
+        )
         self.stdout.write("")
         self.stdout.write(
             self.style.SUCCESS(
