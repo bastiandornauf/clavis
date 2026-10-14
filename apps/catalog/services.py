@@ -132,6 +132,84 @@ def coverage_by_book(*, reviewed_only: bool = False) -> list[dict[str, object]]:
     return rows
 
 
+TECHNIQUES = ("Creo", "Intellego", "Muto", "Perdo", "Rego")
+FORMS = (
+    "Animal",
+    "Aquam",
+    "Auram",
+    "Corpus",
+    "Herbam",
+    "Ignem",
+    "Imaginem",
+    "Mentem",
+    "Terram",
+    "Vim",
+)
+
+
+def workshop_grid(*, reviewed_only: bool = False) -> list[dict[str, object]]:
+    """Hermetic spells and guidelines counted per Technique × Form."""
+    counts: dict[tuple[str, str, str], int] = {}
+    rows = (
+        current_entries(reviewed_only=reviewed_only)
+        .filter(
+            entry_type__in=[CatalogEntry.EntryType.SPELL, CatalogEntry.EntryType.GUIDELINE],
+            kind=CatalogEntry.Kind.DEFINITION,
+            technique__in=TECHNIQUES,
+            form__in=FORMS,
+        )
+        .values("entry_type", "technique", "form")
+        .annotate(total=Count("id"))
+    )
+    for row in rows:
+        counts[(row["entry_type"], row["technique"], row["form"])] = row["total"]
+    return [
+        {
+            "technique": technique,
+            "cells": [
+                {
+                    "form": form,
+                    "spells": counts.get(("spell", technique, form), 0),
+                    "guidelines": counts.get(("guideline", technique, form), 0),
+                }
+                for form in FORMS
+            ],
+        }
+        for technique in TECHNIQUES
+    ]
+
+
+def workshop_cell(
+    technique: str, form: str, *, reviewed_only: bool = False
+) -> tuple[list[CatalogEntry], list[CatalogEntry]]:
+    """Guidelines and spells for one Technique + Form, lowest level first."""
+    base = current_entries(reviewed_only=reviewed_only).filter(
+        kind=CatalogEntry.Kind.DEFINITION, technique=technique, form=form
+    )
+    guidelines = list(
+        base.filter(entry_type=CatalogEntry.EntryType.GUIDELINE).order_by("level", "name")
+    )
+    spells = list(base.filter(entry_type=CatalogEntry.EntryType.SPELL).order_by("level", "name"))
+    return guidelines, spells
+
+
+MENTION_MAX_WORDS = 6
+
+
+def entry_has_mentions(entry: CatalogEntry) -> bool:
+    """Only proper names are worth a cross-book lookup.
+
+    Guideline and story-seed names are sentences; one-word generic names
+    ("Size", "Ward") would match half the corpus.
+    """
+    if entry.entry_type in {CatalogEntry.EntryType.GUIDELINE, CatalogEntry.EntryType.STORY_SEED}:
+        return False
+    words = entry.name.split()
+    if len(words) > MENTION_MAX_WORDS:
+        return False
+    return len(words) >= 2 or len(entry.name) >= 6
+
+
 def resolve_section_for_entry(entry: CatalogEntry) -> Section | None:
     return (
         Section.objects.filter(

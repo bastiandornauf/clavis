@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% include "components/breadcrumbs.html" %}
+  <h1 class="page-title">{{ technique }} {{ form }}</h1>
+
+  <div class="workshop-columns">
+    <section aria-labelledby="guidelines-heading">
+      <h2 id="guidelines-heading">Guidelines ({{ guidelines|length }})</h2>
+      {% if guidelines %}
+        <ul class="result-list compact">
+          {% for entry in guidelines %}
+            <li>
+              <a href="{% url 'catalog:detail' entry.entry_type entry.slug %}?book={{ entry.book.slug }}">{{ entry.name }}</a>
+              <span class="meta">· {{ entry.book.title }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="meta">No guideline table recognized for {{ technique }} {{ form }}.</p>
+      {% endif %}
+    </section>
+
+    <section aria-labelledby="spells-heading">
+      <h2 id="spells-heading">Spells ({{ spells|length }})</h2>
+      {% if spells %}
+        <ul class="result-list compact">
+          {% for entry in spells %}
+            <li>
+              <a href="{% url 'catalog:detail' entry.entry_type entry.slug %}?book={{ entry.book.slug }}">{{ entry.name }}</a>
+              <span class="meta">
+                · {% if entry.level != None %}Level {{ entry.level }}{% else %}General{% endif %}
+                · {{ entry.book.title }}
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="meta">No spells recognized for {{ technique }} {{ form }}.</p>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

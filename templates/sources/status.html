@@ -42,6 +42,26 @@
     </button>
   </form>
 
+  <h2>Meaning search</h2>
+  {% if meaning_index.complete %}
+    <p class="meta" role="status">
+      Ready: {{ meaning_index.vectors }} of {{ meaning_index.sections }} sections indexed
+      with <code>{{ meaning_index.model_name }}</code> on this machine. Imports keep it current.
+    </p>
+  {% elif meaning_index.vectors %}
+    <p class="notice" role="status">
+      Partly built: {{ meaning_index.vectors }} of {{ meaning_index.sections }} sections.
+      Run <code>uv run python manage.py rebuild_embeddings</code> to finish; it resumes
+      where it stopped.
+    </p>
+  {% else %}
+    <p class="meta" role="status">
+      Not built. Search works by keyword. To also search by meaning, run
+      <code>uv run python manage.py rebuild_embeddings</code> once (local model,
+      no API key, about 30 minutes for all books).
+    </p>
+  {% endif %}
+
   <h2>Recent imports</h2>
   {% if history %}
     <p class="meta">

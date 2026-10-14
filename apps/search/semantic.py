@@ -11,7 +11,7 @@ from django.db.models import Count, Max
 from django.utils.html import escape
 
 from apps.library.models import Book, Section
-from apps.search.embeddings import get_embedder
+from apps.search.embeddings import active_model_name, get_embedder
 from apps.search.models import SectionEmbedding
 from apps.search.services import SearchHit, ensure_fts_schema, search_sections
 from apps.sources.models import SourceSnapshot
@@ -134,6 +134,65 @@ def search_sections_semantic(
             )
         )
     return hits
+
+
+RELATED_MIN_BODY_CHARS = 200
+_RELATED_SKIP_TITLE_RE = re.compile(
+    r"^(?:table of )?contents$|^index$|^credits$|^front matter$|^list of (?:inserts|tables)$",
+    re.I,
+)
+
+
+def related_sections(section: Section, *, limit: int = 5) -> list[tuple[Section, float]]:
+    """Passages elsewhere that read like this one, from the stored vector only.
+
+    Skips the section's own ancestors and descendants (already on the page or one
+    click away) and near-empty heading stubs.
+    """
+    current = SourceSnapshot.current()
+    if not current:
+        return []
+    own = (
+        SectionEmbedding.objects.filter(section=section, model_name=active_model_name())
+        .only("vector", "dimensions", "model_name")
+        .first()
+    )
+    if own is None:
+        return []
+    index = _load_index(current, own.model_name, own.dimensions)
+    if len(index.section_ids) < 2:
+        return []
+    query_vec = np.frombuffer(bytes(own.vector), dtype=np.float32)
+    scores = index.matrix @ query_vec
+    take = min(len(scores), limit * 6 + 1)
+    top = np.argpartition(-scores, take - 1)[:take]
+    top = top[np.argsort(-scores[top])]
+    candidates = [
+        (int(index.section_ids[i]), float(scores[i]))
+        for i in top
+        if int(index.section_ids[i]) != section.id
+    ]
+    by_id = {
+        s.id: s
+        for s in Section.objects.filter(id__in=[sid for sid, _ in candidates]).select_related(
+            "book"
+        )
+    }
+    results: list[tuple[Section, float]] = []
+    for section_id, score in candidates:
+        other = by_id.get(section_id)
+        if other is None or len(other.body_markdown or "") < RELATED_MIN_BODY_CHARS:
+            continue
+        if _RELATED_SKIP_TITLE_RE.match(other.display_title.strip()):
+            continue
+        if other.book_id == section.book_id and (
+            other.path.startswith(f"{section.path}/") or section.path.startswith(f"{other.path}/")
+        ):
+            continue
+        results.append((other, score))
+        if len(results) >= limit:
+            break
+    return results
 
 
 def search_sections_hybrid(

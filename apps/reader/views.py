@@ -28,6 +28,7 @@ from apps.reader.services import (
     section_branch,
     section_path_nodes,
 )
+from apps.search.embeddings import semantic_search_available
 from apps.sources.models import SourceSnapshot
 from clavis.citations import Citation, format_citation
 from clavis.markdown import render_markdown
@@ -144,6 +145,12 @@ def read_section(request: HttpRequest, book_slug: str, section_path: str) -> Htt
         for block in blocks
     ]
 
+    similar = []
+    if semantic_search_available():
+        from apps.search.semantic import related_sections
+
+        similar = [other for other, _ in related_sections(section)]
+
     bookmarks = {b.section_stable_id for b in get_bookmarks_for_book(book)}
     notes = {n.section_stable_id: n for n in get_notes_for_book(book)}
     citation = Citation(**citation_parts(section))
@@ -188,6 +195,7 @@ def read_section(request: HttpRequest, book_slug: str, section_path: str) -> Htt
             "campaigns": Campaign.objects.all(),
             "catalog_entries": catalog_entries,
             "show_header_badges": show_header_badges,
+            "similar_sections": similar,
             "back_to_search_url": back_to_search_url,
             "breadcrumbs": breadcrumbs,
             "page_title": f"{section.display_title} · {book.title}",

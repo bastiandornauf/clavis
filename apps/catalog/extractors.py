@@ -36,6 +36,48 @@ TECHNIQUE_FORM_RE = re.compile(
     r"(?P<form>Animal|Aquam|Auram|Corpus|Herbam|Ignem|Imaginem|Mentem|Terram|Vim)\b",
     re.I,
 )
+# Supplement spell leads: ``MuCo 5``, ``CrHe(An) 10``, ``**ReHe 48**``, ``PeVi Gen``.
+# ``[Il]m`` tolerates the OCR slip ``Mulm`` for MuIm.
+SPELL_ART_LEAD_RE = re.compile(
+    r"^\**\s*(?P<tech>Cr|In|Mu|Pe|Re)(?:\s*\([A-Za-z, ]+\))?"
+    r"(?P<form>An|Aq|Au|Co|He|Ig|[Il]m|Me|Te|Vi)"
+    r"(?:\s*\([A-Za-z, ]+\))?\s+(?:Level\s+)?(?P<level>\d+|Gen(?:eral)?)\b",
+    re.M,
+)
+# Creature / character powers share R/D/T lines but are not spells:
+# ``1 point, Init: Qik–1, Animal`` · ``Corpus, Pen +0, 1 use/day``.
+POWER_LEAD_RE = re.compile(
+    r"\b\d+\s+points?\b|\bno cost\b|\bInit(?:iative)?\s*[:(]"
+    r"|\bPen\s*\+\d+,\s*(?:\d+|unlimited)\s+uses?\b",
+    re.I,
+)
+# Non-Hermetic spell leads: ``Level 10`` (Amazons), ``Aloe 30`` (Soqotra),
+# ``Evocation/Beguile 15`` (faerie wizardry), ``Threads of Fate Ease Factor 30``.
+FOREIGN_SPELL_LEAD_RE = re.compile(
+    r"^\**\s*(?P<label>[A-Z][A-Za-z'/ ]{1,40}?)\s+(?:Ease Factor\s+)?(?:\d+|General)\b",
+    re.M,
+)
+NON_HERMETIC = "Non-Hermetic"
+TECHNIQUE_ABBREVIATIONS = {
+    "Cr": "Creo",
+    "In": "Intellego",
+    "Mu": "Muto",
+    "Pe": "Perdo",
+    "Re": "Rego",
+}
+FORM_ABBREVIATIONS = {
+    "An": "Animal",
+    "Aq": "Aquam",
+    "Au": "Auram",
+    "Co": "Corpus",
+    "He": "Herbam",
+    "Ig": "Ignem",
+    "Im": "Imaginem",
+    "lm": "Imaginem",
+    "Me": "Mentem",
+    "Te": "Terram",
+    "Vi": "Vim",
+}
 # Classic Core: *Major, Hermetic* — Art & Academe: *Social Status, Major*
 VF_ITALIC_RE = re.compile(
     r"^\*(?:"
@@ -280,6 +322,30 @@ def _parent_technique_form(section: Section) -> tuple[str, str]:
     return "", ""
 
 
+_PAREN_RE = re.compile(r"\(([^()]*(?:\([^()]*\)[^()]*)*)\)")
+
+
+def _art_lead(text: str) -> tuple[str, str, int | None]:
+    """Technique, form and level from an abbreviated lead like ``MuCo 5``.
+
+    Also checks parentheses: ``Air of Friendly Magic (MuVi 30)``.
+    """
+    match = SPELL_ART_LEAD_RE.search(text)
+    if not match:
+        for inner in _PAREN_RE.finditer(text):
+            match = SPELL_ART_LEAD_RE.match(inner.group(1).strip())
+            if match:
+                break
+    if not match:
+        return "", "", None
+    level = int(match.group("level")) if match.group("level").isdigit() else None
+    return (
+        TECHNIQUE_ABBREVIATIONS[match.group("tech")],
+        FORM_ABBREVIATIONS[match.group("form")],
+        level,
+    )
+
+
 def _spell_entry(
     *,
     section: Section,
@@ -288,10 +354,13 @@ def _spell_entry(
     technique: str = "",
     form: str = "",
     level: int | None = None,
+    tradition: str = "",
 ) -> ExtractedEntry:
     if level is None and params.groupdict().get("level"):
         level = int(params.group("level"))
     summary_bits: list[str] = []
+    if tradition:
+        summary_bits.append(tradition)
     if technique and form:
         summary_bits.append(f"{technique} {form}")
     if level is not None:
@@ -315,6 +384,7 @@ def _spell_entry(
         range=params.group("range").strip(),
         duration=params.group("duration").strip(),
         target=params.group("target").strip(),
+        category=tradition,
         evidence=params.group(0).strip()[:240],
     )
 
@@ -337,11 +407,28 @@ def extract_spell(section: Section) -> ExtractedEntry | None:
 
     level = _parent_level(section)
     technique, form = _parent_technique_form(section)
+    lead = head[: params.start()]
+    lead_tech, lead_form, lead_level = _art_lead(lead)
+    if not lead_tech:
+        lead_tech, lead_form, lead_level = _art_lead(_section_title(section))
+    if not technique or not form:
+        technique, form = lead_tech, lead_form
     if not technique or not form:
         tf = TECHNIQUE_FORM_RE.search(body[:800])
         if tf:
             technique = tf.group("tech").title()
             form = tf.group("form").title()
+    if level is None:
+        level = lead_level
+
+    tradition = ""
+    if not (technique and form):
+        around = head[: params.end() + 80]
+        if POWER_LEAD_RE.search(around):
+            return None
+        foreign = FOREIGN_SPELL_LEAD_RE.search(lead)
+        if foreign and foreign.group("label").strip().lower() != "general":
+            tradition = NON_HERMETIC
 
     # Prefer true formulaic spell writeups: LEVEL parent and/or Tech+Form.
     # Bare R/D/T later in creature powers is already excluded by the window.
@@ -358,6 +445,7 @@ def extract_spell(section: Section) -> ExtractedEntry | None:
         technique=technique,
         form=form,
         level=level,
+        tradition=tradition,
     )
 
 
@@ -394,10 +482,15 @@ def extract_blockquote_spells(section: Section) -> list[ExtractedEntry]:
         if key in seen:
             continue
         head_chunk = prefix[-200:] + body[params.start() : params.start() + 200]
+        lead_tech, lead_form, lead_level = _art_lead(prefix[-120:])
+        if not (technique and form) and lead_tech:
+            technique, form = lead_tech, lead_form
         tf = TECHNIQUE_FORM_RE.search(head_chunk)
         if tf:
             technique = technique or tf.group("tech").title()
             form = form or tf.group("form").title()
+        if not (technique and form) and POWER_LEAD_RE.search(prefix[-160:]):
+            continue
         seen.add(key)
         found.append(
             _spell_entry(
@@ -406,6 +499,7 @@ def extract_blockquote_spells(section: Section) -> list[ExtractedEntry]:
                 params=params,
                 technique=technique,
                 form=form,
+                level=None if params.groupdict().get("level") else lead_level,
             )
         )
     return found
@@ -841,6 +935,27 @@ def _guideline_bullet_label(text: str) -> str:
     return text
 
 
+def _join_table_rows(body: str) -> str:
+    """Rejoin table rows whose cells wrap onto following lines (``•`` lists in Core)."""
+    lines: list[str] = []
+    pending = ""
+    for line in body.splitlines():
+        stripped = line.strip()
+        if pending:
+            pending += " " + stripped
+            if stripped.endswith("|"):
+                lines.append(pending)
+                pending = ""
+            continue
+        if stripped.startswith("|") and not stripped.endswith("|"):
+            pending = stripped
+            continue
+        lines.append(line)
+    if pending:
+        lines.append(pending)
+    return "\n".join(lines)
+
+
 def extract_guidelines(section: Section) -> list[ExtractedEntry]:
     """Tech+Form guideline tables (Core spell design chapters)."""
     title = _section_title(section)
@@ -850,7 +965,7 @@ def extract_guidelines(section: Section) -> list[ExtractedEntry]:
 
     technique = match.group("tech").title()
     form = match.group("form").title()
-    body = _clean_body(section.body_markdown)
+    body = _join_table_rows(_clean_body(section.body_markdown))
     found: list[ExtractedEntry] = []
     seen: set[str] = set()
 

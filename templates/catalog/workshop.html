@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% include "components/breadcrumbs.html" %}
+  <h1 class="page-title">Spell workshop</h1>
+  <p class="lexicon-intro">
+    Hermetic spells and guidelines by Technique and Form. Pick a combination to see
+    its guidelines next to the spells built from them. Only entries whose Technique
+    and Form were recognized appear here; spells of other traditions are left out.
+  </p>
+
+  <div class="table-scroll">
+    <table class="tefo-grid">
+      <thead>
+        <tr>
+          <th scope="col"><span class="visually-hidden">Technique</span></th>
+          {% for form in forms %}<th scope="col">{{ form }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in grid %}
+          <tr>
+            <th scope="row">{{ row.technique }}</th>
+            {% for cell in row.cells %}
+              <td>
+                {% if cell.spells or cell.guidelines %}
+                  <a href="{% url 'catalog:workshop_cell' row.technique|lower cell.form|lower %}"
+                     title="{{ row.technique }} {{ cell.form }}: {{ cell.spells }} spells, {{ cell.guidelines }} guidelines">
+                    {{ cell.spells }}
+                    <span class="tefo-grid__guides">/ {{ cell.guidelines }}</span>
+                  </a>
+                {% else %}
+                  <span class="meta">–</span>
+                {% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="meta">Each cell: spells / guidelines.</p>
+{% endblock %}

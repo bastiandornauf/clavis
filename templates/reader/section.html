@@ -132,6 +132,20 @@
           </div>
         </nav>
 
+        {% if similar_sections %}
+          <section class="similar-sections" aria-labelledby="similar-heading">
+            <h2 id="similar-heading">Similar passages</h2>
+            <ul class="result-list compact">
+              {% for other in similar_sections %}
+                <li>
+                  <a href="{% url 'reader:section' other.book.slug other.path %}">{{ other.display_title }}</a>
+                  <span class="meta">· {{ other.book.title }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+          </section>
+        {% endif %}
+
         <details class="reader-tools">
           <summary>Save &amp; organize</summary>
           <div class="section-actions" aria-label="Section tools">

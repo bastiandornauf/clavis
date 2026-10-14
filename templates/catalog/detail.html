@@ -43,7 +43,7 @@
       {% if entry.duration %}<div><dt>Duration</dt><dd>{{ entry.duration }}</dd></div>{% endif %}
       {% if entry.target %}<div><dt>Target</dt><dd>{{ entry.target }}</dd></div>{% endif %}
       {% if entry.magnitude %}<div><dt>Magnitude</dt><dd>{{ entry.magnitude }}</dd></div>{% endif %}
-      {% if entry.category %}<div><dt>Category</dt><dd>{{ entry.category }}</dd></div>{% endif %}
+      {% if entry.category %}<div><dt>{% if entry.entry_type == "spell" %}Tradition{% else %}Category{% endif %}</dt><dd>{{ entry.category }}</dd></div>{% endif %}
     {% endif %}
     <div><dt>Book</dt><dd>{{ entry.book.title }}</dd></div>
   </dl>
@@ -53,17 +53,38 @@
   {% endif %}
 
   {% if section %}
-    <p><a class="button" href="{% url 'reader:section' section.book.slug section.path %}">Open in reader</a></p>
+    <p>
+      <a class="button" href="{% url 'reader:section' section.book.slug section.path %}">Open in reader</a>
+      {% if in_workshop %}
+        <a class="button secondary" href="{% url 'catalog:workshop_cell' entry.technique|lower entry.form|lower %}">
+          All {{ entry.technique }} {{ entry.form }}
+        </a>
+      {% endif %}
+    </p>
   {% else %}
     <p class="warning">Source section could not be resolved for the current import.</p>
   {% endif %}
 
   {% if related %}
-    <h2>Other matches</h2>
+    <h2>Also defined in</h2>
     <ul class="result-list compact">
       {% for item in related %}
         <li>
-          <p class="meta">{{ item.book.title }} · {{ item.section_path }}</p>
+          <a href="{% url 'catalog:detail' item.entry_type item.slug %}?book={{ item.book.slug }}">{{ item.book.title }}</a>
+          <span class="meta">· {{ item.section_path }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if mentions %}
+    <h2>Mentioned in</h2>
+    <ul class="result-list compact">
+      {% for hit in mentions %}
+        <li>
+          <a href="{% url 'reader:section' hit.section.book.slug hit.section.path %}">{{ hit.section.display_title }}</a>
+          <span class="meta">· {{ hit.section.book.title }}</span>
+          <p class="meta">{{ hit.snippet|safe }}</p>
         </li>
       {% endfor %}
     </ul>

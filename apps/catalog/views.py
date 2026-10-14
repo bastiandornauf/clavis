@@ -6,15 +6,22 @@ from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
 
+from apps.catalog.extractors import NON_HERMETIC
 from apps.catalog.models import CatalogEntry
 from apps.catalog.services import (
+    FORMS,
+    TECHNIQUES,
     coverage_by_book,
     coverage_counts,
     current_entries,
+    entry_has_mentions,
     resolve_section_for_entry,
+    workshop_cell,
+    workshop_grid,
 )
 from apps.library.models import Book
 from apps.library.preferences import apply_reviewed_only, get_reviewed_only
+from apps.search.services import sections_mentioning
 from apps.sources.models import SourceSnapshot
 
 
@@ -49,6 +56,48 @@ def catalog_coverage(request: HttpRequest) -> HttpResponse:
     )
 
 
+def spell_workshop(request: HttpRequest) -> HttpResponse:
+    return render(
+        request,
+        "catalog/workshop.html",
+        {
+            "grid": workshop_grid(reviewed_only=get_reviewed_only(request)),
+            "forms": FORMS,
+            "page_title": "Spell workshop",
+            "breadcrumbs": [
+                {"label": "Lexicon", "url": reverse("catalog:index")},
+                {"label": "Spell workshop", "url": None},
+            ],
+        },
+    )
+
+
+def spell_workshop_cell(request: HttpRequest, technique: str, form: str) -> HttpResponse:
+    technique, form = technique.title(), form.title()
+    if technique not in TECHNIQUES or form not in FORMS:
+        raise Http404("Unknown Technique or Form.")
+    guidelines, spells = workshop_cell(
+        technique, form, reviewed_only=get_reviewed_only(request)
+    )
+    title = f"{technique} {form}"
+    return render(
+        request,
+        "catalog/workshop_cell.html",
+        {
+            "technique": technique,
+            "form": form,
+            "guidelines": guidelines,
+            "spells": spells,
+            "page_title": title,
+            "breadcrumbs": [
+                {"label": "Lexicon", "url": reverse("catalog:index")},
+                {"label": "Spell workshop", "url": reverse("catalog:workshop")},
+                {"label": title, "url": None},
+            ],
+        },
+    )
+
+
 def catalog_list(request: HttpRequest, entry_type: str) -> HttpResponse:
     if entry_type not in CatalogEntry.EntryType.values:
         entry_type = CatalogEntry.EntryType.SPELL
@@ -66,7 +115,13 @@ def catalog_list(request: HttpRequest, entry_type: str) -> HttpResponse:
     book_slug = request.GET.get("book", "").strip()
     level_min = request.GET.get("level_min", "").strip()
     level_max = request.GET.get("level_max", "").strip()
+    tradition = request.GET.get("tradition", "").strip()
 
+    if entry_type == CatalogEntry.EntryType.SPELL:
+        if tradition == "hermetic":
+            entries = entries.exclude(technique="")
+        elif tradition == "other":
+            entries = entries.filter(category=NON_HERMETIC)
     if q:
         entries = entries.filter(name__icontains=q)
     if magnitude:
@@ -117,6 +172,7 @@ def catalog_list(request: HttpRequest, entry_type: str) -> HttpResponse:
             "selected_book": book_slug,
             "level_min": level_min,
             "level_max": level_max,
+            "selected_tradition": tradition,
             "books": books,
             "breadcrumbs": breadcrumbs,
             "page_title": label,
@@ -139,10 +195,21 @@ def catalog_detail(request: HttpRequest, entry_type: str, slug: str) -> HttpResp
     if entry is None:
         raise Http404("No catalog entry matches.")
     section = resolve_section_for_entry(entry)
-    related = current_entries(reviewed_only=only).filter(
-        entry_type=entry_type,
-        slug=slug,
-    ).exclude(pk=entry.pk)[:20]
+    related = list(
+        current_entries(reviewed_only=only)
+        .filter(entry_type=entry_type, slug=slug)
+        .exclude(pk=entry.pk)[:20]
+    )
+    mentions = []
+    if entry_has_mentions(entry):
+        defined_in = {entry.primary_section_stable_id} | {
+            other.primary_section_stable_id for other in related
+        }
+        mentions = [
+            hit
+            for hit in sections_mentioning(entry.name, exclude_stable_ids=defined_in)
+            if not only or hit.section.book.review_status == Book.ReviewStatus.REVIEWED
+        ]
 
     breadcrumbs = [
         {"label": "Lexicon", "url": reverse("catalog:index")},
@@ -159,6 +226,8 @@ def catalog_detail(request: HttpRequest, entry_type: str, slug: str) -> HttpResp
             "entry": entry,
             "section": section,
             "related": related,
+            "mentions": mentions,
+            "in_workshop": entry.technique in TECHNIQUES and entry.form in FORMS,
             "breadcrumbs": breadcrumbs,
             "page_title": entry.name,
         },

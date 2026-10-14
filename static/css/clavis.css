@@ -1260,6 +1260,54 @@ button.secondary:hover,
   font-size: 0.9rem;
 }
 
+.similar-sections {
+  margin-top: var(--space-5);
+  font-family: var(--font-ui);
+  font-size: 0.92rem;
+}
+
+.similar-sections h2 {
+  font-size: 1rem;
+  margin: 0 0 var(--space-2);
+}
+
+.table-scroll {
+  overflow-x: auto;
+  margin-bottom: var(--space-3);
+}
+
+.tefo-grid {
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+}
+
+.tefo-grid th,
+.tefo-grid td {
+  border: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-3);
+  text-align: center;
+}
+
+.tefo-grid tbody th {
+  text-align: left;
+}
+
+.tefo-grid td a {
+  display: block;
+}
+
+.tefo-grid__guides {
+  color: var(--color-ink-muted);
+  font-size: 0.8rem;
+}
+
+.workshop-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: var(--space-5);
+}
+
 .site-footer {
   border-top: 1px solid var(--color-border);
   padding: var(--space-5) 0;

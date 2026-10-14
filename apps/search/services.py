@@ -76,6 +76,47 @@ def _fts_query(raw: str) -> str:
     return " AND ".join(parts)
 
 
+def sections_mentioning(
+    phrase: str,
+    *,
+    exclude_stable_ids: set[str] = frozenset(),
+    limit: int = 10,
+) -> list[SearchHit]:
+    """Sections whose text contains ``phrase`` as an exact word sequence."""
+    ensure_fts_schema()
+    tokens = [t for t in _SAFE_TOKEN.split(phrase.strip()) if t]
+    current = SourceSnapshot.current()
+    if not tokens or not current:
+        return []
+    fts_query = '"' + " ".join(tokens) + '"'
+    sql = f"""
+        SELECT f.section_id,
+               snippet({FTS_TABLE}, 3, '<mark>', '</mark>', '…', 16) AS snip,
+               f.rank
+        FROM {FTS_TABLE} AS f
+        JOIN {Book._meta.db_table} AS b ON b.id = f.book_id
+        WHERE {FTS_TABLE} MATCH %s AND b.snapshot_id = %s
+        ORDER BY f.rank
+        LIMIT %s
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(sql, [fts_query, current.pk, limit + len(exclude_stable_ids) + 5])
+        rows = cursor.fetchall()
+    sections = {
+        s.id: s
+        for s in Section.objects.filter(id__in=[row[0] for row in rows]).select_related("book")
+    }
+    hits: list[SearchHit] = []
+    for section_id, snippet, rank in rows:
+        section = sections.get(section_id)
+        if section is None or section.stable_id in exclude_stable_ids:
+            continue
+        hits.append(SearchHit(section=section, snippet=snippet or "", rank=float(rank)))
+        if len(hits) >= limit:
+            break
+    return hits
+
+
 def search_sections(
     query: str,
     *,

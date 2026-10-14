@@ -54,6 +54,12 @@ still resolve.
 Rules currently recognize:
 
 - **Spells** — section body with `R:/D:/T:` params; level from parent `LEVEL N` heading
+  or an abbreviated lead (`MuCo 5`, `Re(Cr)Te 20`, `CrIg Level 15`, `(MuVi 30)` in
+  the title). Creature/character powers (`1 point, Init …`, `Pen +0, 1 use/day`)
+  are not spells. Clear foreign leads (`Level 10`, `Evocation/Beguile 15`) get
+  `category=Non-Hermetic`; unclear stays empty.
+- **Spell workshop** (`/lexicon/workshop/`) — Technique × Form grid of Hermetic
+  spells and guidelines; guideline tables with wrapped `•` cells are rejoined.
 - **Virtues / Flaws** — classic `*Major/Minor, Category*`, category-first italics (`*Social Status, Major*`), plain `Major/Minor … Virtue/Flaw`, and bold-packed blocks under Virtues/Flaws chapter headings
 - **Story seeds** — `Story Seed:` headings and body lines
 - **Creatures** — `Magic/Faerie/Infernal/Divine Might` within the lead window
@@ -77,6 +83,11 @@ Heading titles decode CommonMark escapes (`Ceremony\*` → `Ceremony*`) for disp
   only once vectors for the active model exist (`semantic_search_available`).
   Scoring is a numpy matrix product over an in-process cache. `hashing-v1` is
   the dependency-free test backend and never enables the UI on its own.
+  The Reader's **Similar passages** reuse the section's stored vector (no model
+  load). Sources shows index status.
+- **Mentioned in** — Lexicon detail runs an exact-phrase FTS lookup of the entry
+  name (`sections_mentioning`), skipping guidelines, story seeds, and generic
+  one-word names.
 
 ## Deferred phases
 

@@ -9,6 +9,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
 
+from apps.search.embeddings import index_status
 from apps.sources.models import SourceSnapshot
 from apps.sources.services import SourceSyncError, check_for_updates, import_sources
 
@@ -56,6 +57,7 @@ def sources_status(request: HttpRequest) -> HttpResponse:
             "history_limit": RECENT_IMPORT_LIMIT,
             "source_repo_url": settings.CLAVIS_SOURCE_REPO_URL,
             "update_check": update_check,
+            "meaning_index": index_status(),
             "page_title": "Sources",
         },
     )

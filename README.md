@@ -50,9 +50,9 @@ the same work (for example Definitive Edition replaces the old Core Rules WIP).
 
 | Area | Features |
 |---|---|
-| **Library / Reader** | Nested TOC, breadcrumbs, single section or include subsections |
-| **Search** | Full-text (FTS5) across imported books |
-| **Lexicon** | Rule-extracted spells, virtues, flaws, story seeds, creatures, characters |
+| **Library / Reader** | Nested TOC, breadcrumbs, single section or include subsections, similar passages, gallery, guides |
+| **Search** | Full-text (FTS5) across imported books; optional local meaning search |
+| **Lexicon** | Rule-extracted spells (Hermetic / non-Hermetic), virtues, flaws, story seeds, creatures, beasts, characters, guidelines, abilities, boons, hooks, organizations, places, items; spell workshop; "mentioned in" links |
 | **Saved / Campaigns** | Bookmarks, notes, campaign excerpts (local overlays) |
 | **Sources** | Sync from the Open License repo, update check, import history |
 

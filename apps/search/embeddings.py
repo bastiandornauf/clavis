@@ -141,6 +141,25 @@ def semantic_search_available() -> bool:
     ).exists()
 
 
+def index_status() -> dict[str, object]:
+    """How much of the current snapshot the active model has embedded."""
+    current = SourceSnapshot.current()
+    model_name = active_model_name()
+    if not current:
+        return {"model_name": model_name, "vectors": 0, "sections": 0, "complete": False}
+    sections = Section.objects.filter(book__snapshot=current).count()
+    vectors = SectionEmbedding.objects.filter(
+        model_name=model_name, book__snapshot=current
+    ).count()
+    return {
+        "model_name": model_name.removeprefix("local:"),
+        "vectors": vectors,
+        "sections": sections,
+        "complete": bool(sections) and vectors >= sections,
+        "available": semantic_search_available(),
+    }
+
+
 def refresh_embeddings_after_import(book_ids: list[int]) -> int:
     """Keep an existing meaning-search index in step with a new import.
 

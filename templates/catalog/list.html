@@ -27,6 +27,14 @@
     </label>
     {% if entry_type == 'spell' %}
       <label>
+        Tradition
+        <select name="tradition">
+          <option value="">All</option>
+          <option value="hermetic" {% if selected_tradition == 'hermetic' %}selected{% endif %}>Hermetic</option>
+          <option value="other" {% if selected_tradition == 'other' %}selected{% endif %}>Non-Hermetic</option>
+        </select>
+      </label>
+      <label>
         Technique
         <input type="text" name="technique" value="{{ selected_technique }}" placeholder="Creo">
       </label>
