@@ -61,6 +61,7 @@
     {% endif %}
     <p class="filter-count" aria-live="polite">
       {{ hits|length }} result{{ hits|length|pluralize }}{% if reviewed_only %} (reviewed only){% endif %}
+      {% if glossary_notes %}· also searched: {{ glossary_notes|join:", " }}{% endif %}
     </p>
     <ul class="result-list">
       {% for hit in hits %}

@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from django.db import connection
 
 from apps.library.models import Book, Section
+from apps.search.glossary import glossary_matches, query_tokens
 from apps.sources.models import SourceSnapshot
 
 FTS_TABLE = "section_fts"
@@ -66,13 +67,35 @@ def rebuild_fts_for_books(book_ids: list[int]) -> None:
         )
 
 
+def _fts_phrase(words: tuple[str, ...]) -> str:
+    return '"' + " ".join(word.replace('"', "") for word in words) + '"'
+
+
 def _fts_query(raw: str) -> str:
-    tokens = [t for t in _SAFE_TOKEN.split(raw.strip()) if t]
+    tokens = query_tokens(raw)
     if not tokens:
         return ""
-    # Prefix match on the last token helps partial typing; AND the rest.
-    parts = [f'"{token}"' for token in tokens[:-1]]
-    parts.append(f'"{tokens[-1]}"*')
+    matches = {match.start: match for match in glossary_matches(tokens)}
+    parts: list[str] = []
+    index = 0
+    while index < len(tokens):
+        match = matches.get(index)
+        if match:
+            typed = tuple(tokens[index : index + match.length])
+            # The typed words keep AND semantics; only the added counterpart is a phrase.
+            alternatives = [
+                " AND ".join(_fts_phrase((word,)) for word in alt)
+                if alt == typed
+                else _fts_phrase(alt)
+                for alt in match.alternatives
+            ]
+            parts.append("(" + " OR ".join(alternatives) + ")")
+            index += match.length
+            continue
+        # Prefix match on the last plain token helps partial typing; AND the rest.
+        suffix = "*" if index == len(tokens) - 1 else ""
+        parts.append(_fts_phrase((tokens[index],)) + suffix)
+        index += 1
     return " AND ".join(parts)
 
 

@@ -32,6 +32,7 @@
   --space-5: 1.5rem;
   --space-6: 2rem;
   --space-7: 3rem;
+  --radius: 4px;
   /* Fluid measure: comfortable reading width within fixed bounds. */
   --content-width: clamp(20rem, 55ch, 42rem);
   --shell-max: 72rem;

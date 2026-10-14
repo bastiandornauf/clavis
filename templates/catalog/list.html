@@ -18,6 +18,7 @@
     <a href="{% url 'catalog:list' 'organization' %}" {% if entry_type == 'organization' %}aria-current="page"{% endif %}>Orgs ({{ counts.organization|default:0 }})</a>
     <a href="{% url 'catalog:list' 'place' %}" {% if entry_type == 'place' %}aria-current="page"{% endif %}>Places ({{ counts.place|default:0 }})</a>
     <a href="{% url 'catalog:list' 'item' %}" {% if entry_type == 'item' %}aria-current="page"{% endif %}>Items ({{ counts.item|default:0 }})</a>
+    <a href="{% url 'catalog:list' 'vis_source' %}" {% if entry_type == 'vis_source' %}aria-current="page"{% endif %}>Vis sources ({{ counts.vis_source|default:0 }})</a>
   </nav>
 
   <form class="filter-bar" method="get">
@@ -38,6 +39,14 @@
           <option value="">All</option>
           <option value="hermetic" {% if selected_tradition == 'hermetic' %}selected{% endif %}>Hermetic</option>
           <option value="other" {% if selected_tradition == 'other' %}selected{% endif %}>Non-Hermetic</option>
+        </select>
+      </label>
+      <label>
+        Source
+        <select name="effects">
+          <option value="">Spells and device effects</option>
+          <option value="spells" {% if selected_effects == 'spells' %}selected{% endif %}>Spells only</option>
+          <option value="devices" {% if selected_effects == 'devices' %}selected{% endif %}>Device effects only</option>
         </select>
       </label>
       <label>
@@ -135,6 +144,11 @@
       <label>
         Category
         <input type="text" name="category" value="{{ selected_category }}" placeholder="House / Covenant">
+      </label>
+    {% elif entry_type == 'vis_source' %}
+      <label>
+        Art
+        <input type="text" name="category" value="{{ selected_category }}" placeholder="Vim / Mixed">
       </label>
     {% endif %}
     <label>

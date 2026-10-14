@@ -21,12 +21,15 @@ from clavis.markdown.normalize import unescape_markdown_text
 _FIRST_SENTENCE = re.compile(r"([^.!?\n]{12,200}[.!?])")
 
 # Mundane beasts: Characteristics with Cun + Size/Qualities, no Realm Might.
+# Plain or bold labels; Size may follow Characteristics on the same line.
 BEAST_CHARS_RE = re.compile(
-    r"^Characteristics:\s*.*\bCun\b",
+    r"^\**Characteristics\**\s*:\**\s*.*\bCun\b",
     re.I | re.M,
 )
-BEAST_SIZE_RE = re.compile(r"^Size:\s*", re.I | re.M)
-BEAST_QUALITIES_RE = re.compile(r"^Qualities:\s*", re.I | re.M)
+BEAST_SIZE_RE = re.compile(
+    r"(?:^|\*\*)\s*Size\**\s*:\**\s*(?P<size>[+\-–−]?[\s*]*\d+)?", re.I | re.M
+)
+BEAST_QUALITIES_RE = re.compile(r"^\**Qualities\**\s*:", re.I | re.M)
 SKIP_BEAST_TITLE_RE = re.compile(
     r"^(beasts in combat|creating (mundane )?beasts|mundane beasts|"
     r"book of mundane beasts|appendix)\b|"
@@ -71,9 +74,7 @@ _HERMETIC_HOUSES = (
     "Verditius",
 )
 HOUSE_TITLE_RE = re.compile(
-    r"^House\s+(?P<house>"
-    + "|".join(h.replace(" ", r"\s+") for h in _HERMETIC_HOUSES)
-    + r")\s*$",
+    r"^House\s+(?P<house>" + "|".join(h.replace(" ", r"\s+") for h in _HERMETIC_HOUSES) + r")\s*$",
     re.I,
 )
 SKIP_ORG_TITLE_RE = re.compile(
@@ -93,9 +94,46 @@ COVENANT_PLACE_TITLE_RE = re.compile(
     re.I,
 )
 SKIP_PLACE_TITLE_RE = re.compile(
-    r"(story ideas|oath of covenant|^introduction\b|play aids|background covenant)",
+    r"(story ideas|oath of covenant|^introduction\b|play aids|background covenant|"
+    r"^chapter\b|^story seed|^(?:features|details) of\b|statistics|^resources$|"
+    r"cost saving|creation|hierarchy|governance|attributes)",
     re.I,
 )
+# Aura stat line near the start: `**Aura:** Magic 5`, `Magic Aura 3`, `Aura: 4`.
+PLACE_AURA_LINE_RE = re.compile(
+    r"^\**(?:(?:Magic|Faerie|Divine|Infernal)\s+)?Aura\**\s*:?\**\s*"
+    r"(?:(?:Magic|Faerie|Divine|Infernal)\s+)?\d+",
+    re.I | re.M,
+)
+PLACE_AURA_WINDOW = 500
+# Subsection titles of a covenant writeup (Tribunal books: Covenfolk / History / Magi).
+COVENANT_PART_RE = re.compile(
+    r"^(?:the\s+)?(?P<part>covenfolk|grogs|laborator(?:y|ies)|librar(?:y|ies)|vis sources?|"
+    r"vis|boons?\s*(?:&|and)\s*hooks|charter|magi|history|resources|inhabitants|site|"
+    r"specialists|income|fortifications?|defen[cs]es|the covenant)\b",
+    re.I,
+)
+COVENANT_MARKER_RE = re.compile(r"^(covenfolk|grogs|laborator|librar|vis|boon|charter)", re.I)
+COVENANT_MIN_PARTS = 3
+
+ORG_NAME_RE = re.compile(
+    r"^(?:The\s+)?(?:Cult|Order|League|Brotherhood|Confraternity|Fraternity|Societas|"
+    r"Sisterhood|Knights)\s+of\s+(?:the\s+)?[A-Z]"
+    r"|^(?:The\s+)?(?:[A-Z][\w'-]+\s+){1,3}(?:Brotherhood|Knights|Order|Cult|Societas|"
+    r"Confraternity)$"
+    r"|^Knights\s+(?:Templar|Hospitaller)$"
+)
+# Topic sections about a group ("History of …", "… and the Order", "… Today").
+SKIP_ORG_NAME_RE = re.compile(
+    r"^(?:The\s+)?(History|Story|Stories|Saga|Secrets|Structure|Ranks|Masters|Entering|"
+    r"Inventing|Progression|Locating|Other|Spread|Resurrecting|Damaging|Prosecution|"
+    r"Attitude|Incorporation|Induction|Before|After|Reverence|Rivals|War|Against|Face|News|"
+    r"Converts|Allies|Magi|How|Appendix|Chapter|Growth|Fall|Foundation|Founding|"
+    r"Partitioning|Crises|Relationship|Preservers|Revenge|Endangering|Rejoining|Hermetic|"
+    r"Mundane|Organization|Holy|Erudite|Scrying|Demonically|Mercurian|Poor)\b"
+    r"|\s(?:in|and|Today|Alternatives|Forms)\b|[:{&]",
+)
+ORG_MIN_BODY = 300
 CORE_SEASON_COVENANT_RE = re.compile(
     r"^(Vernus|Aestas|Autumnus|Hiems)\b",
     re.I,
@@ -168,9 +206,9 @@ def extract_beast(section: Section) -> ExtractedEntry | None:
         return None
 
     size = ""
-    size_match = re.search(r"^Size:\s*(?P<size>[^\n]+)", head, re.I | re.M)
-    if size_match:
-        size = size_match.group("size").strip()
+    size_match = BEAST_SIZE_RE.search(head)
+    if size_match and size_match.group("size"):
+        size = re.sub(r"[\s*]+", "", size_match.group("size"))
 
     summary_bits = ["Mundane beast"]
     if size:
@@ -305,8 +343,7 @@ def extract_organization(section: Section) -> ExtractedEntry | None:
     # True Lineages-style offices: only under House chapter organization paths.
     path = (section.path or "").lower()
     house_office_path = bool(
-        re.search(r"house-[a-z-]+/.*(?:house-)?organization", path)
-        or "house-organization" in path
+        re.search(r"house-[a-z-]+/.*(?:house-)?organization", path) or "house-organization" in path
     )
     if section.level == 3 and house_office_path:
         if SKIP_TITLE_RE.match(title):
@@ -331,7 +368,40 @@ def extract_organization(section: Section) -> ExtractedEntry | None:
             form=house,
             evidence=title,
         )
+
+    # Named orders, cults, leagues: "The Cult of Mercury", "The Teutonic Knights".
+    if (
+        ORG_NAME_RE.match(title)
+        and not SKIP_ORG_NAME_RE.search(title)
+        and len(body.strip()) >= ORG_MIN_BODY
+    ):
+        return ExtractedEntry(
+            entry_type="organization",
+            name=title,
+            slug=slugify(title)[:200] or "organization",
+            summary=_summary(body),
+            section=section,
+            category="",
+            evidence=title,
+        )
     return None
+
+
+def _child_titles(section: Section) -> list[str]:
+    """Subsection titles; boxes (unsaved pseudo-sections) have none."""
+    if section.pk is None:
+        return []
+    return [child.title for child in section.children.all()]
+
+
+def _is_covenant_writeup(section: Section) -> bool:
+    """Subsections read like a covenant: ≥3 typical parts, one covenant-only."""
+    parts = set()
+    for title in _child_titles(section):
+        match = COVENANT_PART_RE.match(title.strip())
+        if match:
+            parts.add(match.group("part").casefold())
+    return len(parts) >= COVENANT_MIN_PARTS and any(map(COVENANT_MARKER_RE.match, parts))
 
 
 def extract_place(section: Section) -> ExtractedEntry | None:
@@ -344,22 +414,25 @@ def extract_place(section: Section) -> ExtractedEntry | None:
     if len(body.strip()) < 40:
         return None
 
+    category = "Covenant"
     if COVENANT_PLACE_TITLE_RE.search(title) and section.level <= 2:
         pass
-    elif CORE_SEASON_COVENANT_RE.match(title) and _path_has(
-        section, "covenant-season"
-    ):
+    elif CORE_SEASON_COVENANT_RE.match(title) and _path_has(section, "covenant-season"):
         pass
+    elif section.level <= 3 and _is_covenant_writeup(section):
+        pass
+    elif PLACE_AURA_LINE_RE.search(body[:PLACE_AURA_WINDOW]):
+        category = ""
     else:
         return None
 
     aura = ""
-    aura_match = re.search(
+    aura_match = PLACE_AURA_LINE_RE.search(body[:PLACE_AURA_WINDOW]) or re.search(
         r"\b((?:Magic|Faerie|Divine|Infernal)\s+)?[Aa]ura\s+(?:of\s+)?(\d+)\b",
         body[:600],
     )
     if aura_match:
-        aura = aura_match.group(0)
+        aura = re.sub(r"\s+", " ", aura_match.group(0).replace("*", "")).strip()
 
     summary = _summary(body)
     if aura and aura not in summary:
@@ -367,11 +440,11 @@ def extract_place(section: Section) -> ExtractedEntry | None:
 
     return ExtractedEntry(
         entry_type="place",
-        name=title,
+        name=title.title() if title.islower() else title,
         slug=slugify(title)[:200] or "place",
         summary=summary[:512],
         section=section,
-        category="",
+        category=category,
         evidence=title,
     )
 

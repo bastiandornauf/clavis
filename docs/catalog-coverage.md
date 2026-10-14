@@ -15,7 +15,7 @@ has the three pilot books imported.
 | Virtues / Flaws | shipped | Italic both orders, plain lines, bold blocks, chapter path |
 | Story seeds | shipped | Headings + blockquote/body lines; short prose labels |
 | Creatures | shipped | Might lead within ~400 chars |
-| Characters | shipped | Age / Magus headers; house from title or body |
+| Characters | shipped | Age / Magus headers; stat blocks (incl. NPC templates, `category=Template`); house from title or body |
 | Guidelines | shipped | Tech+Form guideline tables |
 | Abilities | shipped | Specialties + category line |
 
@@ -51,7 +51,7 @@ Rough corpus signal (all 54 files, pattern hits ≠ unique entries):
 | Type | Detection sketch | Why |
 |---|---|---|
 | **Creature** | `Magic/Faerie/Infernal/Divine Might` near start + often Characteristics | Spieltisch-Gegner/NSC-Werte |
-| **Character** | `**Name, Magus/Maga…**` or `**Age:**` + Personality Traits; not Might-led | Named magi / companions in tribunal books |
+| **Character** | `**Name, Magus/Maga…**`, `**Age:**` + Personality Traits, or a stat block (characteristics + Virtues & Flaws + Age/Abilities) at the section start; not Might-led | Named magi / companions in tribunal books |
 | **Guideline** | Heading contains Guideline / Base … under Technique·Form parents | Spell design companion to Spells |
 | **Ability** | Chapter-5 style headings + category line (General/Academic/…) | Character creation |
 
@@ -174,11 +174,18 @@ Minor Hooks) + spot-check **Through the Aegis** applied lines.
 ### WP5 — Places / Covenants ✅ (narrow, high precision)
 
 Named covenants/oppida (`The Covenant of…`, `Jardin: A Summer Covenant`,
-Core Vernus/Aestas/…) — not every Mythic Locations chapter yet.
+Core Vernus/Aestas/…) and covenant writeups recognized by their subsections
+(≥3 of Covenfolk / History / Magi / Library / Laboratories / Vis / Boons & Hooks …,
+one covenant-only) get `category=Covenant`. Sections with an Aura stat line at
+the start (`**Aura:** Divine 5`; Mythic Locations islands, regio areas) are places
+without category. A place stays next to creatures / characters of the same section.
 
 ### WP6 — Organizations ✅
 
-Core House blurbs + True Lineages offices under House organization paths.
+Core House blurbs + True Lineages offices under House organization paths, plus
+named orders, cults, leagues, and brotherhoods by title (`The Cult of Mercury`,
+`The Teutonic Knights`, `Augustan Brotherhood`). Topic sections about a group
+(`History of …`, `… in Ireland`, `… Today`, `Story Seed: …`) are skipped.
 
 ### WP7 — Enchanted items ✅ (narrow)
 

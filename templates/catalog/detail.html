@@ -36,6 +36,9 @@
     {% elif entry.entry_type == "item" %}
       {% if entry.category %}<div><dt>Use</dt><dd>{{ entry.category }}</dd></div>{% endif %}
       {% if entry.technique %}<div><dt>Effect</dt><dd>{{ entry.technique }} {{ entry.form }}{% if entry.level != None %} {{ entry.level }}{% endif %}</dd></div>{% endif %}
+    {% elif entry.entry_type == "vis_source" %}
+      {% if entry.form %}<div><dt>Art</dt><dd>{{ entry.form }}</dd></div>{% endif %}
+      {% if entry.level != None %}<div><dt>Pawns</dt><dd>{{ entry.level }}</dd></div>{% endif %}
     {% elif entry.entry_type == "place" %}
       {% if entry.category %}<div><dt>Kind</dt><dd>{{ entry.category }}</dd></div>{% endif %}
     {% else %}
@@ -48,6 +51,7 @@
       {% if entry.target %}<div><dt>Target</dt><dd>{{ entry.target }}</dd></div>{% endif %}
       {% if entry.magnitude %}<div><dt>Magnitude</dt><dd>{{ entry.magnitude }}</dd></div>{% endif %}
       {% if entry.category %}<div><dt>{% if entry.entry_type == "spell" %}Tradition{% else %}Category{% endif %}</dt><dd>{{ entry.category }}</dd></div>{% endif %}
+      {% if entry.device_effect %}<div><dt>Source</dt><dd><a href="{% url 'catalog:detail' 'item' entry.slug %}?book={{ entry.book.slug }}">Effect of an enchanted item</a></dd></div>{% endif %}
     {% endif %}
     <div><dt>Book</dt><dd>{{ entry.book.title }}</dd></div>
   </dl>

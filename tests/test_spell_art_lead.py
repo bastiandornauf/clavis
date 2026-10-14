@@ -206,5 +206,59 @@ def test_enchanted_item_with_spell_style_effect_keeps_item(book: Book):
         "**T:** Structure\n\nThis enchanted item, a carved statue of a rat, keeps "
         "animals out.\n\n(Base 2, +1 Touch, +2 Sun, +3 Structure; +4 Constant Effect)",
     )
-    types = sorted(entry.entry_type for entry in extract_from_section(section))
-    assert types == ["item", "spell"]
+    entries = extract_from_section(section)
+    assert sorted(entry.entry_type for entry in entries) == ["item", "spell"]
+    spell = next(entry for entry in entries if entry.entry_type == "spell")
+    assert spell.device_effect
+
+
+@pytest.mark.django_db
+def test_mixed_bold_params_after_art_lead(book: Book):
+    section = _section(
+        book,
+        "Reparation of the Wounded Vessel",
+        "**CrHe(Te)** 45\n\nR: Touch, **D:** Momentary, **T:** Structure, Ritual\n\nRepairs.",
+    )
+    spell = extract_spell(section)
+    assert (spell.technique, spell.form, spell.level, spell.target.strip()) == (
+        "Creo",
+        "Herbam",
+        45,
+        "Structure",
+    )
+
+
+@pytest.mark.django_db
+def test_bold_params_opening_section_with_own_level(book: Book):
+    section = _section(
+        book,
+        "The Discerning Eye",
+        "**R:** Per, **D:** Sun, **T:** Vision, **Level Gen**\n\nAn enhanced version.",
+    )
+    spell = extract_spell(section)
+    assert spell is not None and spell.level_general
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("Rego Córporem 10", "Rego Corpus 10"),
+        ("Creo Imágonem, Intéllego Animál", "Creo Imaginem, Intellego Animal"),
+        ("MUTO CORPOREM", "MUTO CORPUS"),
+        ("Indrechtach an t-Éigse", "Indrechtach an t-Éigse"),
+    ],
+)
+def test_art_names_are_normalized(raw, expected):
+    from apps.catalog.extractors import normalize_art_names
+
+    assert normalize_art_names(raw) == expected
+
+
+@pytest.mark.django_db
+def test_accented_art_parent_heading(book: Book):
+    parent = _section(book, "Rego Córporem Spells", "")
+    spell = _section(book, "Despair of the Quivering Manacles", "R: Touch, D: Sun, T: Ind")
+    spell.parent = parent
+    spell.save()
+    entry = extract_spell(spell)
+    assert (entry.technique, entry.form) == ("Rego", "Corpus")

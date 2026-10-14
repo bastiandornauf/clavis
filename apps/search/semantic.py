@@ -13,6 +13,7 @@ from django.utils.html import escape
 
 from apps.library.models import Book, Section
 from apps.search.embeddings import active_model_name, get_embedder
+from apps.search.glossary import expand_for_meaning
 from apps.search.models import SectionChunkEmbedding, SectionEmbedding
 from apps.search.services import SearchHit, ensure_fts_schema, search_sections
 from apps.sources.models import SourceSnapshot
@@ -80,9 +81,7 @@ def _load_index(snapshot: SourceSnapshot, model_name: str, dimensions: int) -> _
         return _index
 
 
-def _load_chunk_index(
-    snapshot: SourceSnapshot, model_name: str, dimensions: int
-) -> _ChunkIndex:
+def _load_chunk_index(snapshot: SourceSnapshot, model_name: str, dimensions: int) -> _ChunkIndex:
     """Long-section tail chunks as a matrix, cached like the section index."""
     global _chunk_index
     rows = SectionChunkEmbedding.objects.filter(
@@ -148,7 +147,7 @@ def active_index() -> _VectorIndex | None:
 
 def query_vector(text: str) -> np.ndarray:
     """Embed free text with the active model (loads it on first use)."""
-    return np.frombuffer(get_embedder().embed_query(text), dtype=np.float32)
+    return np.frombuffer(get_embedder().embed_query(expand_for_meaning(text)), dtype=np.float32)
 
 
 def rank_sections(
@@ -210,7 +209,7 @@ def search_sections_semantic(
     index = _load_index(current, embedder.model_name, embedder.dimensions)
     if not len(index.section_ids):
         return []
-    query_vec = np.frombuffer(embedder.embed_query(query), dtype=np.float32)
+    query_vec = np.frombuffer(embedder.embed_query(expand_for_meaning(query)), dtype=np.float32)
 
     book_filter = np.asarray(book_ids, dtype=np.int64)
     # Section score = best of its head vector and any tail chunk; the winning
@@ -243,9 +242,9 @@ def search_sections_semantic(
 
     sections = {
         section.id: section
-        for section in Section.objects.filter(
-            id__in=[sid for sid, _, _ in ranked]
-        ).select_related("book", "book__snapshot", "parent")
+        for section in Section.objects.filter(id__in=[sid for sid, _, _ in ranked]).select_related(
+            "book", "book__snapshot", "parent"
+        )
     }
     hits: list[SearchHit] = []
     for section_id, score, span in ranked:
@@ -395,9 +394,7 @@ def _minmax(scores: dict[int, float]) -> dict[int, float]:
     return {key: (value - low) / span for key, value in scores.items()}
 
 
-def _semantic_snippet(
-    section: Section, query: str, *, span: tuple[int, int] | None = None
-) -> str:
+def _semantic_snippet(section: Section, query: str, *, span: tuple[int, int] | None = None) -> str:
     """Plain-text excerpt; escaped because the template renders snippets as HTML.
 
     ``span`` limits the excerpt to the matching chunk of a long section.

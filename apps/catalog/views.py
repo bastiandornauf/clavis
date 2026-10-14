@@ -115,7 +115,7 @@ def spell_workshop_cell(request: HttpRequest, technique: str, form: str) -> Http
     technique, form = technique.title(), form.title()
     if technique not in TECHNIQUES or form not in FORMS:
         raise Http404("Unknown Technique or Form.")
-    guidelines, spells = workshop_cell(
+    guidelines, spells, device_effects = workshop_cell(
         technique, form, reviewed_only=get_reviewed_only(request)
     )
     title = f"{technique} {form}"
@@ -127,6 +127,7 @@ def spell_workshop_cell(request: HttpRequest, technique: str, form: str) -> Http
             "form": form,
             "guidelines": guidelines,
             "spells": spells,
+            "device_effects": device_effects,
             "page_title": title,
             "breadcrumbs": [
                 {"label": "Lexicon", "url": reverse("catalog:index")},
@@ -155,12 +156,17 @@ def catalog_list(request: HttpRequest, entry_type: str) -> HttpResponse:
     level_min = request.GET.get("level_min", "").strip()
     level_max = request.GET.get("level_max", "").strip()
     tradition = request.GET.get("tradition", "").strip()
+    effects = request.GET.get("effects", "").strip()
 
     if entry_type == CatalogEntry.EntryType.SPELL:
         if tradition == "hermetic":
             entries = entries.exclude(technique="")
         elif tradition == "other":
             entries = entries.filter(category=NON_HERMETIC)
+        if effects == "spells":
+            entries = entries.filter(device_effect=False)
+        elif effects == "devices":
+            entries = entries.filter(device_effect=True)
     if q:
         entries = entries.filter(name__icontains=q)
     if magnitude:
@@ -221,6 +227,7 @@ def catalog_list(request: HttpRequest, entry_type: str) -> HttpResponse:
             "level_min": level_min,
             "level_max": level_max,
             "selected_tradition": tradition,
+            "selected_effects": effects,
             "books": books,
             "breadcrumbs": breadcrumbs,
             "page_title": label,

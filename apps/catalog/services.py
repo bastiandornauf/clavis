@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from collections import Counter
+from dataclasses import dataclass, field
+
 from django.db import transaction
-from django.db.models import Count, QuerySet
+from django.db.models import Count, Prefetch, QuerySet
 
 from apps.catalog.extractors import extract_from_section
 from apps.catalog.models import CatalogEntry
@@ -21,6 +24,7 @@ def rebuild_catalog_for_books(book_ids: list[int]) -> int:
     sections = (
         Section.objects.filter(book_id__in=book_ids)
         .select_related("book", "book__snapshot", "parent", "parent__parent")
+        .prefetch_related(Prefetch("children", queryset=Section.objects.only("parent_id", "title")))
         .order_by("book_id", "position")
     )
     batch: list[CatalogEntry] = []
@@ -41,6 +45,7 @@ def rebuild_catalog_for_books(book_ids: list[int]) -> int:
                     form=extracted.form,
                     level=extracted.level,
                     level_general=extracted.level_general,
+                    device_effect=extracted.device_effect,
                     range=extracted.range,
                     duration=extracted.duration,
                     target=extracted.target,
@@ -57,6 +62,53 @@ def rebuild_catalog_for_books(book_ids: list[int]) -> int:
     if batch:
         CatalogEntry.objects.bulk_create(batch)
     return created
+
+
+EntryKey = tuple[str, str, str]
+
+
+@dataclass
+class CatalogDiff:
+    """What a rebuild changed, keyed by (type, name, section stable id)."""
+
+    before: set[EntryKey] = field(default_factory=set)
+    after: set[EntryKey] = field(default_factory=set)
+
+    @property
+    def added(self) -> list[EntryKey]:
+        return sorted(self.after - self.before)
+
+    @property
+    def removed(self) -> list[EntryKey]:
+        return sorted(self.before - self.after)
+
+    def counts(self) -> list[tuple[str, int, int]]:
+        """``(entry_type, before, after)`` for every type seen on either side."""
+        before = Counter(key[0] for key in self.before)
+        after = Counter(key[0] for key in self.after)
+        return [(t, before[t], after[t]) for t in sorted(set(before) | set(after))]
+
+
+def _entry_keys(book_ids: list[int]) -> set[EntryKey]:
+    return set(
+        CatalogEntry.objects.filter(book_id__in=book_ids).values_list(
+            "entry_type", "name", "primary_section_stable_id"
+        )
+    )
+
+
+def rebuild_catalog_with_diff(book_ids: list[int], *, dry_run: bool = False) -> CatalogDiff:
+    """Rebuild the catalog for ``book_ids`` and report what changed.
+
+    ``dry_run`` rolls the rebuild back, so rule changes can be checked first.
+    """
+    diff = CatalogDiff(before=_entry_keys(book_ids))
+    with transaction.atomic():
+        rebuild_catalog_for_books(book_ids)
+        diff.after = _entry_keys(book_ids)
+        if dry_run:
+            transaction.set_rollback(True)
+    return diff
 
 
 def current_entries(*, reviewed_only: bool = False) -> QuerySet[CatalogEntry]:
@@ -158,6 +210,7 @@ def workshop_grid(*, reviewed_only: bool = False) -> list[dict[str, object]]:
             kind=CatalogEntry.Kind.DEFINITION,
             technique__in=TECHNIQUES,
             form__in=FORMS,
+            device_effect=False,
         )
         .values("entry_type", "technique", "form")
         .annotate(total=Count("id"))
@@ -182,8 +235,8 @@ def workshop_grid(*, reviewed_only: bool = False) -> list[dict[str, object]]:
 
 def workshop_cell(
     technique: str, form: str, *, reviewed_only: bool = False
-) -> tuple[list[CatalogEntry], list[CatalogEntry]]:
-    """Guidelines and spells for one Technique + Form, lowest level first."""
+) -> tuple[list[CatalogEntry], list[CatalogEntry], list[CatalogEntry]]:
+    """Guidelines, spells and device effects for one Technique + Form, lowest level first."""
     base = current_entries(reviewed_only=reviewed_only).filter(
         kind=CatalogEntry.Kind.DEFINITION, technique=technique, form=form
     )
@@ -195,7 +248,11 @@ def workshop_cell(
             "-level_general", "level", "name"
         )
     )
-    return guidelines, spells
+    return (
+        guidelines,
+        [spell for spell in spells if not spell.device_effect],
+        [spell for spell in spells if spell.device_effect],
+    )
 
 
 MENTION_MAX_WORDS = 6

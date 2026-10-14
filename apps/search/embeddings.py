@@ -143,9 +143,7 @@ def semantic_search_available() -> bool:
     current = SourceSnapshot.current()
     if not current:
         return False
-    return SectionEmbedding.objects.filter(
-        model_name=model_name, book__snapshot=current
-    ).exists()
+    return SectionEmbedding.objects.filter(model_name=model_name, book__snapshot=current).exists()
 
 
 def index_status() -> dict[str, object]:
@@ -161,9 +159,7 @@ def index_status() -> dict[str, object]:
             "complete": False,
         }
     sections = Section.objects.filter(book__snapshot=current).count()
-    vectors = SectionEmbedding.objects.filter(
-        model_name=model_name, book__snapshot=current
-    ).count()
+    vectors = SectionEmbedding.objects.filter(model_name=model_name, book__snapshot=current).count()
     chunks = SectionChunkEmbedding.objects.filter(
         model_name=model_name, book__snapshot=current
     ).count()
@@ -430,7 +426,5 @@ def rebuild_chunk_embeddings_for_books(
     flush()
 
     SectionChunkEmbedding.objects.filter(book_id__in=book_ids).exclude(model_name=model).delete()
-    logger.info(
-        "Chunk embeddings %s: %s embedded, %s reused", model, total, len(copies)
-    )
+    logger.info("Chunk embeddings %s: %s embedded, %s reused", model, total, len(copies))
     return total

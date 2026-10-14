@@ -38,6 +38,22 @@
       {% else %}
         <p class="meta">No spells recognized for {{ technique }} {{ form }}.</p>
       {% endif %}
+
+      {% if device_effects %}
+        <h2 id="device-effects-heading">Device effects ({{ device_effects|length }})</h2>
+        <p class="meta">Spell-style effects of enchanted items — useful as lab text references.</p>
+        <ul class="result-list compact" aria-labelledby="device-effects-heading">
+          {% for entry in device_effects %}
+            <li>
+              <a href="{% url 'catalog:detail' entry.entry_type entry.slug %}?book={{ entry.book.slug }}">{{ entry.name }}</a>
+              <span class="meta">
+                {% if entry.level != None %}· Level {{ entry.level }}{% endif %}
+                · {{ entry.book.title }}
+              </span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
     </section>
   </div>
 {% endblock %}

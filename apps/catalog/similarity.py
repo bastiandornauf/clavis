@@ -150,9 +150,7 @@ def missed_entry_candidates(entry_type: str, *, limit: int = CANDIDATE_LIMIT) ->
     scores = np.sort(similarity, axis=1)[:, -neighbors:].mean(axis=1)
     order = np.argsort(-scores)[: limit * 3]
     section_ids = [int(index.section_ids[free_rows[i]]) for i in order]
-    sections = {
-        s.id: s for s in Section.objects.filter(id__in=section_ids).select_related("book")
-    }
+    sections = {s.id: s for s in Section.objects.filter(id__in=section_ids).select_related("book")}
     found: list[Candidate] = []
     for i, section_id in zip(order, section_ids, strict=True):
         section = sections.get(section_id)

@@ -10,6 +10,7 @@ from apps.library.models import Book
 from apps.library.preferences import apply_reviewed_only, get_reviewed_only
 from apps.library.services import citation_parts
 from apps.search.embeddings import semantic_search_available
+from apps.search.glossary import glossary_notes
 from apps.search.services import search_sections
 from apps.sources.models import SourceSnapshot
 from clavis.citations import Citation, format_citation
@@ -98,6 +99,7 @@ def search_page(request: HttpRequest) -> HttpResponse:
             "search_modes": modes,
             "selected_mode": mode,
             "meaning_fallback": meaning_fallback,
+            "glossary_notes": glossary_notes(query) if query else [],
             "edition_choices": Book.Edition.choices,
             "status_choices": Book.ReviewStatus.choices,
             "return_query": urlencode(filter_params),

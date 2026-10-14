@@ -89,8 +89,7 @@ def test_extract_boons_hooks_core_and_covenants_shapes(tmp_path: Path):
         title="Major Site Boons",
         path="boons/major-site",
         body_markdown=(
-            "**Aura**: Limited aura boost.\n\n"
-            "**Immunity:** Immune to a form of damage.\n"
+            "**Aura**: Limited aura boost.\n\n**Immunity:** Immune to a form of damage.\n"
         ),
         stable_id="major-site",
     )
@@ -190,7 +189,7 @@ def test_extract_place_covenant_and_season_example(tmp_path: Path):
     )
     place = extract_place(jardin)
     assert place is not None
-    assert place.category == ""
+    assert place.category == "Covenant"
 
     vernus = _section(
         book,
@@ -294,3 +293,107 @@ def test_power_cost_line_is_not_an_item(tmp_path: Path):
         body_markdown="1 point, Init +2, Corpus: The demon causes pain. Pen +0 against.",
     )
     assert extract_item(section) is None
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("line", "realm", "might"),
+    [
+        ("**Order:** Fury (Master) **Infernal Might:** 25 (Mentem)", "Infernal", 25),
+        ("**Magic Might** 20 (Ignem)", "Magic", 20),
+        ("Season: Summer Magic Might: 12 (Animal)", "Magic", 12),
+    ],
+)
+def test_creature_might_line_variants(tmp_path: Path, line, realm, might):
+    section = _section(
+        _book(tmp_path),
+        level=4,
+        title="Lemures",
+        body_markdown=f"{line}\n\n**Characteristics:** Int +2, Per +1\n\n**Size:** 0",
+    )
+    entries = [e for e in extract_from_section(section) if e.entry_type == "creature"]
+    assert len(entries) == 1
+    assert (entries[0].category, entries[0].level) == (realm, might)
+
+
+LONG_PROSE = "The covenant sits on a hill above the river, old and proud. " * 6
+
+
+@pytest.mark.django_db
+def test_covenant_writeup_from_subsection_titles(tmp_path: Path):
+    book = _book(tmp_path)
+    covenant = _section(
+        book, level=2, title="Fengheld", path="fengheld", stable_id="cov", body_markdown=LONG_PROSE
+    )
+    for index, title in enumerate(["History", "Magi", "Covenfolk"]):
+        _section(
+            book,
+            parent=covenant,
+            level=3,
+            title=title,
+            path=f"fengheld/{title.lower()}",
+            stable_id=f"cov-{index}",
+            position=index + 1,
+        )
+
+    place = extract_place(covenant)
+
+    assert place is not None
+    assert (place.name, place.category) == ("Fengheld", "Covenant")
+
+
+@pytest.mark.django_db
+def test_history_and_magi_alone_are_not_a_covenant(tmp_path: Path):
+    book = _book(tmp_path)
+    topic = _section(
+        book, level=2, title="Lámbaird", path="l", stable_id="t", body_markdown=LONG_PROSE
+    )
+    for index, title in enumerate(["History", "Magi", "Inhabitants"]):
+        _section(book, parent=topic, level=3, title=title, path=f"l/{index}", stable_id=f"t{index}")
+
+    assert extract_place(topic) is None
+
+
+@pytest.mark.django_db
+def test_aura_line_marks_a_place_without_category(tmp_path: Path):
+    section = _section(
+        _book(tmp_path),
+        level=4,
+        title="Inner Farne",
+        body_markdown="**Aura:** Divine 5\n\nThe largest island of the archipelago.",
+    )
+
+    place = extract_place(section)
+
+    assert place is not None
+    assert place.category == ""
+    assert "Aura" in place.summary
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "title", ["The Cult of Mercury", "The Teutonic Knights", "Augustan Brotherhood"]
+)
+def test_named_orders_and_cults_are_organizations(tmp_path: Path, title: str):
+    section = _section(_book(tmp_path), level=3, title=title, body_markdown=LONG_PROSE)
+
+    org = extract_organization(section)
+
+    assert org is not None
+    assert org.name == title
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "title",
+    [
+        "History of the Augustan Brotherhood",
+        "The Order of Hermes in Ireland",
+        "Story Seed: The Cult",
+        "The Knights of the Green Stone Today",
+    ],
+)
+def test_topics_about_groups_are_not_organizations(tmp_path: Path, title: str):
+    section = _section(_book(tmp_path), level=3, title=title, body_markdown=LONG_PROSE)
+
+    assert extract_organization(section) is None

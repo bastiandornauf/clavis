@@ -109,6 +109,10 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = CLAVIS_DATA_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "config.storage.VersionedStaticFilesStorage"},
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

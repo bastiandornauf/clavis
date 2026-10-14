@@ -55,6 +55,12 @@ Rules currently recognize the types below in sections and in titled boxes
 (`> ### Heading` stays inside its section on import; `boxed_sections` unquotes each
 box so all rules read it like a subsection, entries point at the enclosing
 section). `New Spell:` style title prefixes are dropped from entry names.
+Art names are matched accent-insensitively, with `Corporem`/`Imagonem` read as
+`Corpus`/`Imaginem`. Rules live in the `apps.catalog.extractors` package, one module
+per type (`spells`, `virtues`, `creatures`, `characters`, …; `dispatch` decides
+which run). Saga types (beasts, boons, orgs, places, items) stay in
+`apps.catalog.saga_extractors`. `rebuild_catalog --dry-run` shows the per-type
+before/after diff of a rule change.
 
 - **Spells** — section body with `R:/D:/T:` params; level from parent `LEVEL N` heading
   or an abbreviated lead (`MuCo 5`, `Re(Cr)Te 20`, `CrIg Level 15`, `(MuVi 30)` in
@@ -69,10 +75,23 @@ section). `New Spell:` style title prefixes are dropped from entry names.
   "Example … Effects" are not devices. An effect section is both item and spell.
 - **Spell workshop** (`/lexicon/workshop/`) — Technique × Form grid of Hermetic
   spells and guidelines; guideline tables with wrapped `•` cells are rejoined.
-- **Virtues / Flaws** — classic `*Major/Minor, Category*`, category-first italics (`*Social Status, Major*`), plain `Major/Minor … Virtue/Flaw`, and bold-packed blocks under Virtues/Flaws chapter headings
+- **Virtues / Flaws** — classic `*Major/Minor, Category*`, category-first italics (`*Social Status, Major*`), plain `Major/Minor … Virtue/Flaw`, and bold-packed blocks under Virtues/Flaws chapter headings.
+  Kind comes from the line (`*Major, Supernatural Virtue*`), then a `New Flaw:` /
+  `Virtue:` title prefix, then path / ancestor / earlier sibling headings; without
+  any of these the entry is skipped, not guessed
+- **Vis sources** (`vis_source`) — renewing sites only: a section led by a yearly
+  amount (`*6 pawns of Perdo per year*`), `Vis Site:` / `Vis Source:` titles, and
+  name + amount lists in `Vis Sources` sections (skipping sites with their own
+  section). Art in `form`/`category` (`Mixed` for several), pawns in `level`.
+  Objects of Virtue, creature vis, and one-off finds are not sources
+- **Beasts** — mundane stat blocks with `Cun` (plain or bold labels, inline Size), no Might
 - **Story seeds** — `Story Seed:` headings and body lines
 - **Creatures** — `Magic/Faerie/Infernal/Divine Might` within the lead window
-- **Characters** — Age / Personality / Magus-style bold headers (with Hermetic house from title or body)
+- **Characters** — Age / Personality / Magus-style bold headers (with Hermetic house from title or body),
+  plus stat blocks near the section start (characteristics line, Virtues & Flaws, and Age
+  or Abilities; bold, plain, or uppercase `AGE:` labels). No Might line or power R/D/T
+  before the block. Sections under `…templates` / `…vocations` get `category=Template`
+  (house stays in the summary).
 - **Guidelines** — `Creo Ignem Guidelines`-style tables with base levels
 - **Abilities** — writeups with `*Specialties: … (Category)*`
 
@@ -108,6 +127,13 @@ Heading titles decode CommonMark escapes (`Ceremony\*` → `Ceremony*`) for disp
     entry that read like known entries of a type (mean of 3 nearest). Review aid
     only; never writes to the lexicon.
   - Keyword search with zero hits falls back to meaning results, labelled as such.
+- **Search glossary** (`apps.search.glossary`, data only) — keyword search ORs each
+  known term with its counterpart: Art abbreviations both ways (`CrIg` ↔ `Creo Ignem`,
+  all 75 Te+Fo pairs; `MuTe`/`PeTe` only in that spelling), rules short forms
+  (`Pen`, `Init`, `MR`, `BP`, `Conc`, `Diam`, …; not `Per`/`Int`/`Arc`), and spelling
+  variants (Corpus/Corporem, Imaginem/Imagonem, Intellego/Intelligo). Typed words
+  keep AND semantics, so results only grow. Meaning search and Lexicon *Describe*
+  embed the written-out form. The results line lists what was also searched.
 - **Mentioned in** — Lexicon detail runs an exact-phrase FTS lookup of the entry
   name (`sections_mentioning`), skipping guidelines, story seeds, and generic
   one-word names.

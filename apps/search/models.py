@@ -37,9 +37,7 @@ class SectionChunkEmbedding(models.Model):
     the passage that matched. ``content_hash`` is the section's hash at embed time.
     """
 
-    section = models.ForeignKey(
-        Section, on_delete=models.CASCADE, related_name="chunk_embeddings"
-    )
+    section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="chunk_embeddings")
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="chunk_embeddings")
     model_name = models.CharField(max_length=64)
     content_hash = models.CharField(max_length=64)

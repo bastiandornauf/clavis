@@ -75,19 +75,19 @@ class Command(BaseCommand):
                 snapshot=current,
                 status=EnrichmentProposal.Status.PENDING,
             ).delete()
-            self.stdout.write(
-                self.style.WARNING(f"Deleted {deleted} pending proposal(s).")
-            )
+            self.stdout.write(self.style.WARNING(f"Deleted {deleted} pending proposal(s)."))
             return
 
         if options["clear_noise"]:
-            deleted, _ = EnrichmentProposal.objects.filter(
-                snapshot=current,
-                status=EnrichmentProposal.Status.PENDING,
-            ).filter(Q(proposed_entry_type="") | Q(confidence__lt=0.3)).delete()
-            self.stdout.write(
-                self.style.WARNING(f"Deleted {deleted} noisy pending proposal(s).")
+            deleted, _ = (
+                EnrichmentProposal.objects.filter(
+                    snapshot=current,
+                    status=EnrichmentProposal.Status.PENDING,
+                )
+                .filter(Q(proposed_entry_type="") | Q(confidence__lt=0.3))
+                .delete()
             )
+            self.stdout.write(self.style.WARNING(f"Deleted {deleted} noisy pending proposal(s)."))
             return
 
         if options["reject_pending"]:
@@ -99,10 +99,14 @@ class Command(BaseCommand):
             return
 
         if options["accept_pending"]:
-            pending = EnrichmentProposal.objects.filter(
-                snapshot=current,
-                status=EnrichmentProposal.Status.PENDING,
-            ).exclude(proposed_entry_type="").select_related("book")
+            pending = (
+                EnrichmentProposal.objects.filter(
+                    snapshot=current,
+                    status=EnrichmentProposal.Status.PENDING,
+                )
+                .exclude(proposed_entry_type="")
+                .select_related("book")
+            )
             accepted = 0
             skipped = 0
             for proposal in pending:
@@ -112,9 +116,7 @@ class Command(BaseCommand):
                 else:
                     skipped += 1
             self.stdout.write(
-                self.style.SUCCESS(
-                    f"Accepted {accepted} proposal(s); skipped {skipped}."
-                )
+                self.style.SUCCESS(f"Accepted {accepted} proposal(s); skipped {skipped}.")
             )
             return
 
@@ -144,14 +146,8 @@ class Command(BaseCommand):
                     f"c={hint.confidence:.2f}  {hint.proposed_name}  "
                     f"[{hint.section.book.slug}]"
                 )
-            scope = (
-                "includes untyped"
-                if options["include_untyped"]
-                else "typed/signal only"
-            )
-            self.stdout.write(
-                self.style.SUCCESS(f"Dry-run: {len(hints)} hint(s) ({scope}).")
-            )
+            scope = "includes untyped" if options["include_untyped"] else "typed/signal only"
+            self.stdout.write(self.style.SUCCESS(f"Dry-run: {len(hints)} hint(s) ({scope})."))
             return
 
         created = persist_proposals(hints)

@@ -24,6 +24,7 @@ class CatalogEntry(models.Model):
         ORGANIZATION = "organization", "Organization"
         PLACE = "place", "Place"
         ITEM = "item", "Item"
+        VIS_SOURCE = "vis_source", "Vis source"
 
     class Kind(models.TextChoices):
         DEFINITION = "definition", "Definition"
@@ -53,6 +54,8 @@ class CatalogEntry(models.Model):
     level = models.PositiveSmallIntegerField(null=True, blank=True)
     # General spells (``Gen``) have no fixed level; distinct from "level not found".
     level_general = models.BooleanField(default=False)
+    # Spell-style effect of an enchanted device (also listed as an item).
+    device_effect = models.BooleanField(default=False)
     range = models.CharField(max_length=64, blank=True)
     duration = models.CharField(max_length=64, blank=True)
     target = models.CharField(max_length=64, blank=True)

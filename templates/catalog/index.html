@@ -73,6 +73,10 @@
         <h2>Items</h2>
         <p class="meta">{{ counts.item|default:0 }} definitions</p>
       </a>
+      <a class="book-card" href="{% url 'catalog:list' 'vis_source' %}">
+        <h2>Vis sources</h2>
+        <p class="meta">{{ counts.vis_source|default:0 }} definitions</p>
+      </a>
     </div>
 
     <p class="lexicon-tools">

@@ -90,9 +90,7 @@ def interesting_leftover_sections(
     """Shortlist leftovers. Default: only high-signal patterns (Might / Specialties)."""
     signal: list[Section] = []
     weak: list[Section] = []
-    for section in sections_without_definitions(
-        snapshot=snapshot, book_ids=book_ids
-    ).iterator():
+    for section in sections_without_definitions(snapshot=snapshot, book_ids=book_ids).iterator():
         if not _is_plausible_leftover(section):
             continue
         if _signal_score(section) > 0:

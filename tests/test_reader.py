@@ -77,6 +77,12 @@ def test_branch_headings_nest_from_h2_and_markdown_source_is_available(
     assert 'class="markdown-source" data-markdown-source hidden' in page
 
 
+@pytest.mark.django_db
+def test_static_urls_carry_a_version(client):
+    body = client.get(reverse("library:index")).content.decode()
+    assert "/static/css/clavis.css?v=" in body
+
+
 def test_br_tags_become_line_breaks():
     html = render_markdown("**Age:** 160<br>**Trait:** Bold")
     assert "&lt;br&gt;" not in html
