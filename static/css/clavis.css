@@ -323,8 +323,15 @@
   --space-6: 2rem;
   --space-7: 3rem;
   --radius: 4px;
-  /* Reading measure. “0” is wider than a typical letter, so 58ch lands near 66–70 letters. */
-  --content-width: clamp(20rem, 58ch, 40rem);
+  /* Reading measure. “0” is wider than a typical letter.
+     Measured on the book serif: 58ch ≈ 70 letters, 64ch ≈ 80, 72ch ≈ 90.
+     Book is the default; Narrow and Wide are a preference. */
+  --reading-size: 1.125rem;
+  --reading-leading: 1.5;
+  --reading-paragraph: 0.85em;
+  --reading-measure: 64ch;
+  --reading-measure-scale: 1;
+  --content-width: clamp(20rem, calc(var(--reading-measure) * var(--reading-measure-scale)), 54rem);
   --shell-max: 72rem;
   --shell-gutter: clamp(1rem, 2.5vw, 2rem);
   --card-min: 16rem;
@@ -1086,6 +1093,36 @@ button.secondary:hover,
   user-select: none;
 }
 
+.reading-prefs {
+  flex: 1 0 100%;
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--color-ink-muted);
+}
+
+.reading-prefs > summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--color-ink-muted);
+}
+
+.reading-prefs > summary:hover {
+  color: var(--color-accent);
+}
+
+.reading-prefs__panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 1.25rem;
+  margin-top: 0.45rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-elevated);
+}
+
 label.reading-font {
   display: inline-flex;
   align-items: center;
@@ -1101,10 +1138,27 @@ label.reading-font {
 label.reading-font select {
   font: inherit;
   color: var(--color-ink);
-  background: var(--color-bg-elevated);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: 0.12rem 0.3rem;
+}
+
+.reading-measure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.reading-measure legend {
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
 }
 
 .view-toggle__label input[type="checkbox"] {
@@ -1361,7 +1415,7 @@ h6.prose-block__title,
 
 .reader-article {
   /* Slightly larger than the interface. The ch measure scales with this size. */
-  font-size: 1.125rem;
+  font-size: var(--reading-size);
   max-width: var(--content-width);
   width: min(100%, var(--content-width));
 }
@@ -1376,14 +1430,14 @@ h6.prose-block__title,
 /* Long book text. UI chrome keeps the tighter body leading. */
 .prose {
   font-weight: 400;
-  line-height: 1.5;
+  line-height: var(--reading-leading);
   text-wrap: pretty;
   hyphens: auto;
   hyphenate-limit-chars: 6 3 3;
 }
 
 .prose p {
-  margin: 0 0 0.85em;
+  margin: 0 0 var(--reading-paragraph);
 }
 
 .prose ul,
@@ -1448,28 +1502,60 @@ h6.prose-block__title,
   margin-bottom: 0;
 }
 
-/* Chapter preference. The book serif stays the default; these faces are a choice. */
+/* Line width is a preference. Book (~80 letters) is the unset default. */
+html[data-reading-measure="narrow"] {
+  --reading-measure: 58ch;
+}
+html[data-reading-measure="book"] {
+  --reading-measure: 64ch;
+}
+html[data-reading-measure="wide"] {
+  --reading-measure: 72ch;
+}
+
+/* Each face keeps its own size, leading, and a small measure correction.
+   ch already tracks the width of “0”; the scale only shortens faces whose
+   letters are wide or loose beyond that. */
 html[data-reading-font="literata"] {
   --reading-font: "Literata", Georgia, serif;
+  --reading-size: 1.15rem;
+  --reading-leading: 1.52;
 }
 html[data-reading-font="inter"] {
   --reading-font: "Inter", var(--font-ui);
   --reading-features: "ss02" 1;
+  --reading-size: 1.0625rem;
+  --reading-leading: 1.48;
+  --reading-measure-scale: 0.92;
 }
 html[data-reading-font="verdana"] {
   --reading-font: Verdana, sans-serif;
+  --reading-size: 1.02rem;
+  --reading-leading: 1.45;
 }
 html[data-reading-font="atkinson"] {
   --reading-font: "Atkinson Hyperlegible", var(--font-ui);
+  --reading-size: 1.15rem;
+  --reading-leading: 1.55;
+  --reading-measure-scale: 0.85;
 }
 html[data-reading-font="andika"] {
   --reading-font: "Andika", var(--font-ui);
+  --reading-size: 1.175rem;
+  --reading-leading: 1.58;
+  --reading-measure-scale: 0.94;
 }
 html[data-reading-font="abeezee"] {
   --reading-font: "ABeeZee", var(--font-ui);
+  --reading-size: 1.125rem;
+  --reading-leading: 1.52;
 }
 html[data-reading-font="opendyslexic"] {
   --reading-font: "OpenDyslexic", var(--font-ui);
+  --reading-size: 1.22rem;
+  --reading-leading: 1.7;
+  --reading-paragraph: 1.05em;
+  --reading-measure-scale: 0.92;
 }
 
 html[data-reading-font] .reader-article,
@@ -1554,7 +1640,7 @@ html[data-reading-font] .passage {
   font-family: var(--font-body);
   font-weight: 400;
   font-size: 1rem;
-  line-height: 1.5;
+  line-height: var(--reading-leading);
   color: var(--color-ink);
   text-wrap: pretty;
   hyphens: auto;

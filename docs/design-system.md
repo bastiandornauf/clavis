@@ -63,13 +63,15 @@ Prefer fluid tokens (`clamp` / `min`) for measure and gutters. Pages should
 compose those tokens rather than inventing one-off values.
 
 `--content-width` is the reading measure for a book chapter and for a found
-passage in search, the lexicon, or a campaign. It targets about 66–70
-characters. On a narrow screen the column uses the available width, which
-lands near 35–40 characters. Chapter text is a regular-weight serif at
+passage in search, the lexicon, or a campaign. The default (Book) is about
+80 characters. Narrow is about 70 and Wide about 90. On a narrow screen the
+column uses the available width. Chapter text is a regular-weight serif at
 1.125rem (about 20px) with a line-height of 1.5. The interface stays at the
-root size. A chapter can switch the reading face to Literata, Inter (with its
-disambiguation set), Verdana, Atkinson Hyperlegible, Andika, ABeeZee, or
-OpenDyslexic. The choice is kept in the browser. The book serif remains the
+root size. Reading options — face and line width — sit in a collapsed
+disclosure on the chapter. A chapter can switch the reading face to Literata,
+Inter (with its disambiguation set), Verdana, Atkinson Hyperlegible, Andika,
+ABeeZee, or OpenDyslexic. Each face nudges size, line spacing, and measure
+for that face. The choice is kept in the browser. The book serif remains the
 default.
 
 ## Components
@@ -82,6 +84,7 @@ default.
 | Result lists | `.result-list` (container-responsive) |
 | Reader TOC | `.toc` |
 | Reader header switches | `.reader-heading__controls`, `.view-toggle__label` |
+| Reading options | `.reading-prefs` (collapsed face and line width) |
 | Raw Markdown view (Reader toggle) | `.markdown-source` |
 | Empty / warning | `.empty-state`, `.warning` |
 | Book / lexicon grids | `.book-grid`, `.book-card` (subgrid-aligned) |

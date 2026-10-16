@@ -12,6 +12,10 @@
       if (readingFont === "literata" || readingFont === "inter" || readingFont === "verdana" || readingFont === "atkinson" || readingFont === "andika" || readingFont === "abeezee" || readingFont === "opendyslexic") {
         document.documentElement.setAttribute("data-reading-font", readingFont);
       }
+      var readingMeasure = localStorage.getItem("clavis.readingMeasure");
+      if (readingMeasure === "narrow" || readingMeasure === "book" || readingMeasure === "wide") {
+        document.documentElement.setAttribute("data-reading-measure", readingMeasure);
+      }
     } catch (e) {}
   </script>
   {% if chargen_home %}

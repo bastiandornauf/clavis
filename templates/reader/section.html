@@ -97,19 +97,39 @@
               <input type="checkbox" data-markdown-toggle>
               Markdown source
             </label>
-            <label class="reading-font" title="A preference for the chapter text. These faces are not a proven reading aid.">
-              Reading font
-              <select data-reading-font>
-                <option value="">Book serif</option>
-                <option value="literata">Literata</option>
-                <option value="inter">Inter</option>
-                <option value="verdana">Verdana</option>
-                <option value="atkinson">Atkinson Hyperlegible</option>
-                <option value="andika">Andika</option>
-                <option value="abeezee">ABeeZee</option>
-                <option value="opendyslexic">OpenDyslexic</option>
-              </select>
-            </label>
+            <details class="reading-prefs">
+              <summary>Reading options</summary>
+              <div class="reading-prefs__panel">
+                <label class="reading-font" title="A preference for the chapter text. Size, line spacing, and measure shift slightly with the face. These faces are not a proven reading aid.">
+                  Reading font
+                  <select data-reading-font>
+                    <option value="">Book serif</option>
+                    <option value="literata">Literata</option>
+                    <option value="inter">Inter</option>
+                    <option value="verdana">Verdana</option>
+                    <option value="atkinson">Atkinson Hyperlegible</option>
+                    <option value="andika">Andika</option>
+                    <option value="abeezee">ABeeZee</option>
+                    <option value="opendyslexic">OpenDyslexic</option>
+                  </select>
+                </label>
+                <fieldset class="reading-measure">
+                  <legend>Line width</legend>
+                  <label class="view-toggle__label" title="About 70 characters">
+                    <input type="radio" name="reading-measure" value="narrow" data-reading-measure>
+                    Narrow
+                  </label>
+                  <label class="view-toggle__label" title="About 80 characters">
+                    <input type="radio" name="reading-measure" value="book" data-reading-measure checked>
+                    Book
+                  </label>
+                  <label class="view-toggle__label" title="About 90 characters">
+                    <input type="radio" name="reading-measure" value="wide" data-reading-measure>
+                    Wide
+                  </label>
+                </fieldset>
+              </div>
+            </details>
           </div>
         </header>
 
@@ -156,22 +176,47 @@
           })();
           (function () {
             var select = document.querySelector("select[data-reading-font]");
-            if (!select) return;
-            var key = "clavis.readingFont";
-            var allowed = ["literata", "inter", "verdana", "atkinson", "andika", "abeezee", "opendyslexic"];
-            var current = "";
-            try { current = localStorage.getItem(key) || ""; } catch (e) {}
-            if (allowed.indexOf(current) === -1) current = "";
-            select.value = current;
-            select.addEventListener("change", function () {
-              var value = allowed.indexOf(select.value) === -1 ? "" : select.value;
-              try {
-                if (value) localStorage.setItem(key, value);
-                else localStorage.removeItem(key);
-              } catch (e) {}
-              if (value) document.documentElement.setAttribute("data-reading-font", value);
-              else document.documentElement.removeAttribute("data-reading-font");
-            });
+            var details = document.querySelector(".reading-prefs");
+            var measures = document.querySelectorAll("[data-reading-measure]");
+            var fontKey = "clavis.readingFont";
+            var measureKey = "clavis.readingMeasure";
+            var openKey = "clavis.readingOptionsOpen";
+            var fonts = ["literata", "inter", "verdana", "atkinson", "andika", "abeezee", "opendyslexic"];
+            var widths = ["narrow", "book", "wide"];
+            if (select) {
+              var current = "";
+              try { current = localStorage.getItem(fontKey) || ""; } catch (e) {}
+              if (fonts.indexOf(current) === -1) current = "";
+              select.value = current;
+              select.addEventListener("change", function () {
+                var value = fonts.indexOf(select.value) === -1 ? "" : select.value;
+                try {
+                  if (value) localStorage.setItem(fontKey, value);
+                  else localStorage.removeItem(fontKey);
+                } catch (e) {}
+                if (value) document.documentElement.setAttribute("data-reading-font", value);
+                else document.documentElement.removeAttribute("data-reading-font");
+              });
+            }
+            if (measures.length) {
+              var width = "book";
+              try { width = localStorage.getItem(measureKey) || "book"; } catch (e) {}
+              if (widths.indexOf(width) === -1) width = "book";
+              measures.forEach(function (input) {
+                input.checked = input.value === width;
+                input.addEventListener("change", function () {
+                  if (!input.checked) return;
+                  try { localStorage.setItem(measureKey, input.value); } catch (e) {}
+                  document.documentElement.setAttribute("data-reading-measure", input.value);
+                });
+              });
+            }
+            if (details) {
+              try { details.open = localStorage.getItem(openKey) === "1"; } catch (e) {}
+              details.addEventListener("toggle", function () {
+                try { localStorage.setItem(openKey, details.open ? "1" : "0"); } catch (e) {}
+              });
+            }
           })();
         </script>
 
