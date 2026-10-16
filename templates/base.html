@@ -6,6 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% if page_title %}{{ page_title }} · {% endif %}{{ clavis_app_name }}</title>
   <link rel="stylesheet" href="{% static 'css/clavis.css' %}">
+  <script>
+    try {
+      var readingFont = localStorage.getItem("clavis.readingFont");
+      if (readingFont === "literata" || readingFont === "inter" || readingFont === "verdana" || readingFont === "atkinson" || readingFont === "andika" || readingFont === "abeezee" || readingFont === "opendyslexic") {
+        document.documentElement.setAttribute("data-reading-font", readingFont);
+      }
+    } catch (e) {}
+  </script>
   {% if chargen_home %}
     <link rel="stylesheet" href="{% static 'css/chargen.css' %}">
   {% endif %}

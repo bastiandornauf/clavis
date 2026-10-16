@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import random
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from math import ceil
 
@@ -485,11 +485,40 @@ def crisis_label(total: int) -> str:
     return "Terminal illness (CrCo 40)"
 
 
-def aging_year_ages(*, age: int, longevity: int = 0, since: int = 0) -> list[int]:
-    """Winters that need a roll. A Longevity Ritual can include years before 36."""
-    years = list(range(36, age + 1))
-    if longevity > 0 and 0 < since < 36:
-        years = list(range(since, min(age, 35) + 1)) + years
+def aging_year_ages(*, age: int, since: int = 0, extra: Sequence[int] = ()) -> list[int]:
+    """Winters that need a roll. ``since`` and stored early years add winters before 36."""
+    years = list(range(36, age + 1)) if age >= 36 else []
+    start = since if 0 < since < 36 else 0
+    for year in extra:
+        if 0 < int(year) < 36:
+            start = int(year) if not start else min(start, int(year))
+    if start:
+        years = list(range(start, min(age, 35) + 1)) + years
+    return years
+
+
+def _year_modifier(source: int | Mapping[object, object], year: int) -> int:
+    """Per-winter modifier, or the same value every winter when given an int."""
+    if isinstance(source, Mapping):
+        raw = source.get(year, source.get(str(year)))
+        if raw in (None, ""):
+            return 0
+        return int(raw)
+    return int(source or 0)
+
+
+def _early_winters(*blobs: object) -> list[int]:
+    years: list[int] = []
+    for blob in blobs:
+        if not isinstance(blob, Mapping):
+            continue
+        for key in blob:
+            try:
+                year = int(key)
+            except (TypeError, ValueError):
+                continue
+            if 0 < year < 36:
+                years.append(year)
     return years
 
 
@@ -519,8 +548,8 @@ def resolve_aging(
     post35: list,
     early: dict,
     crisis_dice: dict,
-    living: int,
-    longevity: int,
+    living: int | Mapping[object, object],
+    longevity: int | Mapping[object, object],
     since: int,
     play: dict[str, int],
     assignments: list[str],
@@ -536,7 +565,6 @@ def resolve_aging(
     decrepitude_xp = 0
     apparent = 0
     crises = 0
-    ritual_active = longevity > 0
     ritual_spent_age: int | None = None
     years: dict[int, dict] = {}
 
@@ -581,17 +609,23 @@ def resolve_aging(
         elif pending:
             notes.append(f"{pending} aging points, any Characteristic")
 
-    for year in aging_year_ages(age=age, longevity=longevity, since=since):
+    winter_ages = aging_year_ages(
+        age=age,
+        since=since,
+        extra=_early_winters(early, living, longevity),
+    )
+    for year in winter_ages:
         die = _die_at(year, post35, early)
         if die is None:
             continue
-        bonus = longevity if ritual_active else 0
+        bonus = _year_modifier(longevity, year)
+        living_mod = _year_modifier(living, year)
         die_used = die
-        capped = ritual_active and year <= 35 and die >= 10
+        capped = bonus > 0 and year <= 35 and die >= 10
         if capped:
             die_used = 9
         total = aging_total(
-            die=die_used, age=year, living_conditions=living, longevity=bonus
+            die=die_used, age=year, living_conditions=living_mod, longevity=bonus
         )
         outcome = aging_outcome(total)
         notes: list[str] = []
@@ -612,9 +646,8 @@ def resolve_aging(
             else:
                 crisis_die = rolled
                 crisis_total = rolled + ceil(year / 10) + new_score
-                if ritual_active:
+                if bonus > 0:
                     crisis_text = "Survived. The Longevity Ritual is spent."
-                    ritual_active = False
                     ritual_spent_age = year
                     spent = True
                 else:
@@ -624,6 +657,8 @@ def resolve_aging(
             "die": die,
             "die_used": die_used,
             "total": total,
+            "living": living_mod,
+            "longevity": bonus,
             "apparent": outcome.apparent_age_increase,
             "capped": capped,
             "crisis": outcome.crisis,

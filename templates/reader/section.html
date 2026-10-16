@@ -97,6 +97,19 @@
               <input type="checkbox" data-markdown-toggle>
               Markdown source
             </label>
+            <label class="reading-font" title="A preference for the chapter text. These faces are not a proven reading aid.">
+              Reading font
+              <select data-reading-font>
+                <option value="">Book serif</option>
+                <option value="literata">Literata</option>
+                <option value="inter">Inter</option>
+                <option value="verdana">Verdana</option>
+                <option value="atkinson">Atkinson Hyperlegible</option>
+                <option value="andika">Andika</option>
+                <option value="abeezee">ABeeZee</option>
+                <option value="opendyslexic">OpenDyslexic</option>
+              </select>
+            </label>
           </div>
         </header>
 
@@ -139,6 +152,25 @@
             toggle.addEventListener("change", function () {
               localStorage.setItem(key, toggle.checked ? "1" : "0");
               apply(toggle.checked);
+            });
+          })();
+          (function () {
+            var select = document.querySelector("select[data-reading-font]");
+            if (!select) return;
+            var key = "clavis.readingFont";
+            var allowed = ["literata", "inter", "verdana", "atkinson", "andika", "abeezee", "opendyslexic"];
+            var current = "";
+            try { current = localStorage.getItem(key) || ""; } catch (e) {}
+            if (allowed.indexOf(current) === -1) current = "";
+            select.value = current;
+            select.addEventListener("change", function () {
+              var value = allowed.indexOf(select.value) === -1 ? "" : select.value;
+              try {
+                if (value) localStorage.setItem(key, value);
+                else localStorage.removeItem(key);
+              } catch (e) {}
+              if (value) document.documentElement.setAttribute("data-reading-font", value);
+              else document.documentElement.removeAttribute("data-reading-font");
             });
           })();
         </script>

@@ -403,6 +403,8 @@ def default_state() -> dict[str, Any]:
         "aging_early": {},
         "aging_crisis": {},
         "aging_assign": [],
+        "aging_living": {},
+        "aging_longevity": {},
         "living_conditions": 0,
         "longevity": 0,
         "longevity_since": 0,
@@ -2009,8 +2011,16 @@ def _apply_aging_post(state: dict[str, Any], post: QueryDict) -> None:
     if roll_crisis:
         crisis[str(_as_int(roll_crisis, 0))] = simple_die()
     state["aging_crisis"] = crisis
-    state["living_conditions"] = _as_int(post.get("living_conditions"), 0)
-    state["longevity"] = _as_int(post.get("longevity"), 0)
+    living = _year_posted(post, "aging_living_")
+    ritual = _year_posted(post, "aging_longevity_", minimum=0)
+    if any(str(key).startswith("aging_living_") for key in post):
+        state["aging_living"] = living
+        if living:
+            state["living_conditions"] = int(next(reversed(living.values())))
+    if any(str(key).startswith("aging_longevity_") for key in post):
+        state["aging_longevity"] = ritual
+        if ritual:
+            state["longevity"] = int(next(reversed(ritual.values())))
     if "longevity_since" in post:
         raw = str(post.get("longevity_since", "")).strip()
         state["longevity_since"] = 0 if raw == "" else max(0, _as_int(raw, 0))
@@ -2020,11 +2030,38 @@ def _apply_aging_post(state: dict[str, Any], post: QueryDict) -> None:
         ]
 
 
+def _year_posted(post: QueryDict, prefix: str, *, minimum: int | None = None) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for key in post:
+        name = str(key)
+        if not name.startswith(prefix):
+            continue
+        year = name.removeprefix(prefix)
+        if not year.isdigit():
+            continue
+        value = _as_int(post.get(key), 0)
+        if minimum is not None:
+            value = max(minimum, value)
+        out[year] = value
+    return out
+
+
+def _winter_mod(stored: object, year: int, fallback: int) -> int:
+    blob = stored if isinstance(stored, dict) else {}
+    if str(year) in blob:
+        return _as_int(blob.get(str(year)), fallback)
+    if year in blob:
+        return _as_int(blob.get(year), fallback)
+    return fallback
+
+
 def _aging_inputs(
     state: dict[str, Any], years: list[int], results: dict[int, dict[str, Any]]
 ) -> list[dict[str, Any]]:
     post35 = list(state.get("aging_dice") or [])
     early = state.get("aging_early") or {}
+    living_fallback = _as_int(state.get("living_conditions"), 0)
+    ritual_fallback = _as_int(state.get("longevity"), 0)
     rows = []
     for year in years:
         if year >= 36:
@@ -2034,12 +2071,25 @@ def _aging_inputs(
         else:
             raw = early.get(str(year), "")
             early_year = True
+        result = results.get(year)
+        living = (
+            int(result["living"])
+            if result and "living" in result
+            else _winter_mod(state.get("aging_living"), year, living_fallback)
+        )
+        ritual = (
+            int(result["longevity"])
+            if result and "longevity" in result
+            else _winter_mod(state.get("aging_longevity"), year, ritual_fallback)
+        )
         rows.append(
             {
                 "age": year,
                 "die": "" if raw in (None, "") else str(raw),
                 "early": early_year,
-                "result": results.get(year),
+                "living": living,
+                "longevity": ritual,
+                "result": result,
             }
         )
     return rows
@@ -2049,6 +2099,8 @@ def _aging_die_values(inputs: list[dict[str, Any]]) -> dict[str, str]:
     values: dict[str, str] = {}
     for row in inputs:
         values[f"aging-die-{row['age']}"] = str(row["die"])
+        values[f"aging-living-{row['age']}"] = str(row["living"])
+        values[f"aging-longevity-{row['age']}"] = str(row["longevity"])
         result = row.get("result") or {}
         if result.get("crisis"):
             raw = result.get("crisis_die")
@@ -2058,8 +2110,25 @@ def _aging_die_values(inputs: list[dict[str, Any]]) -> dict[str, str]:
 
 def _aging_state(state: dict[str, Any], play: dict[str, int]) -> dict[str, Any]:
     age = _as_int(state.get("age"), 25)
-    longevity = _as_int(state.get("longevity"), 0)
     since = _as_int(state.get("longevity_since"), 0)
+    living_fallback = _as_int(state.get("living_conditions"), 0)
+    ritual_fallback = _as_int(state.get("longevity"), 0)
+    extra = []
+    for blob in (state.get("aging_early"), state.get("aging_living"), state.get("aging_longevity")):
+        if not isinstance(blob, dict):
+            continue
+        for key in blob:
+            try:
+                year = int(key)
+            except (TypeError, ValueError):
+                continue
+            if 0 < year < 36:
+                extra.append(year)
+    years = aging_year_ages(age=age, since=since, extra=extra)
+    living = {year: _winter_mod(state.get("aging_living"), year, living_fallback) for year in years}
+    longevity = {
+        year: _winter_mod(state.get("aging_longevity"), year, ritual_fallback) for year in years
+    }
     assigned = []
     for raw in state.get("aging_assign") or []:
         key = raw if raw in CHARACTERISTICS else _characteristic_key(str(raw))
@@ -2070,13 +2139,12 @@ def _aging_state(state: dict[str, Any], play: dict[str, int]) -> dict[str, Any]:
         post35=list(state.get("aging_dice") or []),
         early=dict(state.get("aging_early") or {}),
         crisis_dice=dict(state.get("aging_crisis") or {}),
-        living=_as_int(state.get("living_conditions"), 0),
+        living=living,
         longevity=longevity,
         since=since,
         play=play,
         assignments=assigned,
     )
-    years = aging_year_ages(age=age, longevity=longevity, since=since)
     resolved["filled"] = sum(1 for year in years if year in resolved["years"])
     resolved["winters"] = len(years)
     resolved["crisis_open"] = sorted(
@@ -2206,10 +2274,9 @@ def step_brief(step: str, ctx: dict[str, Any]) -> str:
         )
     if step == "aging":
         return (
-            f"Age {age} is over 35. Enter each stress die after 1s explode — there is no maximum. "
-            "A result of 0 is the die, not a botch. "
-            f"Each of the {ctx['aging']['winters']} winters is labeled with its age. "
-            "Results stay on the sheet as aging, separate from the scores you bought."
+            f"Each of {ctx['aging']['winters']} winters needs a stress die. "
+            "Living conditions and the Longevity Ritual can change by year; "
+            "both are subtracted from that winter's total."
         )
     if step == "details":
         if kind == "grog":

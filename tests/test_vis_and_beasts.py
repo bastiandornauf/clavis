@@ -139,6 +139,45 @@ def test_virtue_kind_from_italic_line_in_mixed_chapter(tmp_path: Path):
 
 
 @pytest.mark.django_db
+def test_major_or_minor_is_inventoried_as_both_sizes(tmp_path: Path):
+    book = _book(tmp_path)
+    chapter = _section(book, "Flaws", "The flaws.", level=2, key="flaws")
+    section = _section(
+        book,
+        "Ambitious",
+        "*Major or Minor, Personality*\n\nYou pursue one great goal.",
+        parent=chapter,
+        key="ambitious",
+    )
+
+    flaws = [e for e in extract_from_section(section) if e.entry_type == "flaw"]
+
+    assert [(e.name, e.magnitude, e.category, e.slug) for e in flaws] == [
+        ("Ambitious", "Minor", "Personality", "ambitious-minor"),
+        ("Ambitious", "Major", "Personality", "ambitious-major"),
+    ]
+
+
+@pytest.mark.django_db
+def test_minor_or_major_bold_block_is_inventoried_as_both_sizes(tmp_path: Path):
+    book = _book(tmp_path)
+    section = _section(
+        book,
+        "List of personality flaws",
+        "**Driven**<br>\n*Personality, Minor or Major*\n\nOne aim consumes you.",
+        level=3,
+        key="flaws",
+    )
+
+    flaws = [e for e in extract_from_section(section) if e.entry_type == "flaw"]
+
+    assert [(e.name, e.magnitude, e.slug) for e in flaws] == [
+        ("Driven", "Minor", "driven-minor"),
+        ("Driven", "Major", "driven-major"),
+    ]
+
+
+@pytest.mark.django_db
 def test_flaw_kind_and_name_from_title_prefix(tmp_path: Path):
     section = _section(
         _book(tmp_path),

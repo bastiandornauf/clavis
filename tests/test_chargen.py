@@ -990,8 +990,10 @@ def test_aging_dice_start_empty(client, fixture_markdown_dir: Path):
     page = client.get(f"{reverse('chargen:new')}?step=aging")
     assert b"Age 36" in page.content
     assert b'name="aging_die" value=""' in page.content
+    assert b'name="aging_living_36"' in page.content
+    assert b'name="aging_longevity_36"' in page.content
+    assert b'name="living_conditions"' not in page.content
     assert b"Not rolled" in page.content
-    assert b"0 until you choose" in page.content
 
 
 class _Faces:
@@ -1715,7 +1717,7 @@ def test_crisis_reaches_the_next_decrepitude_and_spends_the_ritual():
     assert resolved["decrepitude_xp"] == 5
     assert first["crisis_label"] == "Survived. The Longevity Ritual is spent."
     assert resolved["ritual_spent_age"] == 36
-    assert resolved["years"][37]["total"] == 3 + 4
+    assert resolved["years"][37]["total"] == 3 + 4 - 2
 
 
 def test_pre35_ritual_die_counts_as_nine():
@@ -1735,6 +1737,54 @@ def test_pre35_ritual_die_counts_as_nine():
     assert year["capped"] is True
     assert year["die_used"] == 9
     assert year["total"] == 9 + 3 - 1
+
+
+def test_aging_living_and_ritual_are_per_winter():
+    play = {key: 0 for key in ("int", "per", "pre", "com", "str", "sta", "dex", "qik")}
+    resolved = resolve_aging(
+        age=37,
+        post35=[5, 5],
+        early={},
+        crisis_dice={},
+        living={"36": 1, "37": -2},
+        longevity={"36": 2, "37": 0},
+        since=0,
+        play=play,
+        assignments=[],
+    )
+    assert resolved["years"][36]["total"] == 5 + 4 - 1 - 2
+    assert resolved["years"][37]["total"] == 5 + 4 - (-2)
+    assert resolved["years"][36]["living"] == 1
+    assert resolved["years"][37]["longevity"] == 0
+
+
+def test_aging_post_keeps_per_year_modifiers():
+    state = default_state()
+    state["character_type"] = "companion"
+    state["age"] = 37
+    post = QueryDict(mutable=True)
+    post.setlist("aging_die", ["5", "5"])
+    post["aging_living_36"] = "1"
+    post["aging_living_37"] = "-2"
+    post["aging_longevity_36"] = "3"
+    post["aging_longevity_37"] = "0"
+    state = apply_post("aging", state, post)
+    assert state["aging_living"] == {"36": 1, "37": -2}
+    assert state["aging_longevity"] == {"36": 3, "37": 0}
+    play = {key: 0 for key in ("int", "per", "pre", "com", "str", "sta", "dex", "qik")}
+    years = resolve_aging(
+        age=37,
+        post35=state["aging_dice"],
+        early={},
+        crisis_dice={},
+        living=state["aging_living"],
+        longevity=state["aging_longevity"],
+        since=0,
+        play=play,
+        assignments=[],
+    )["years"]
+    assert years[36]["total"] == 5 + 4 - 1 - 3
+    assert years[37]["total"] == 5 + 4 - (-2)
 
 
 def test_house_choice_is_free_and_switches_with_the_house():

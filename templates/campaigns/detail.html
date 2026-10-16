@@ -26,7 +26,7 @@
             <p class="warning">Source changed — check excerpt</p>
           {% endif %}
           {% if row.item.excerpt_text %}
-            <blockquote>{{ row.item.excerpt_text }}</blockquote>
+            <blockquote class="passage">{{ row.item.excerpt_text }}</blockquote>
           {% endif %}
           <form method="post" action="{% url 'campaigns:update_note' campaign.slug row.item.pk %}" class="stack-form">
             {% csrf_token %}

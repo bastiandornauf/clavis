@@ -695,6 +695,42 @@
   white-space: nowrap;
 }
 
+.cg-aging {
+  overflow-x: auto;
+}
+
+.cg-aging .score-table {
+  min-width: min(100%, 42rem);
+}
+
+.cg-aging .cg-trait-score {
+  flex-wrap: nowrap;
+}
+
+.cg-aging td:nth-child(3) select {
+  min-width: 11rem;
+}
+
+.cg-aging-result,
+.score-table .cg-aging-result .meta {
+  white-space: normal;
+}
+
+.cg-aging-result {
+  min-width: 12rem;
+}
+
+.cg-aging-result p {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--color-ink-muted);
+}
+
+.cg-aging-result p + p {
+  margin-top: 0.35rem;
+}
+
 .score-legend {
   font-family: var(--font-ui);
   font-size: 0.8rem;

@@ -62,6 +62,16 @@ CSS custom properties define color, type, spacing, radius, and content width.
 Prefer fluid tokens (`clamp` / `min`) for measure and gutters. Pages should
 compose those tokens rather than inventing one-off values.
 
+`--content-width` is the reading measure for a book chapter and for a found
+passage in search, the lexicon, or a campaign. It targets about 66–70
+characters. On a narrow screen the column uses the available width, which
+lands near 35–40 characters. Chapter text is a regular-weight serif at
+1.125rem (about 20px) with a line-height of 1.5. The interface stays at the
+root size. A chapter can switch the reading face to Literata, Inter (with its
+disambiguation set), Verdana, Atkinson Hyperlegible, Andika, ABeeZee, or
+OpenDyslexic. The choice is kept in the browser. The book serif remains the
+default.
+
 ## Components
 
 | Component | Template / CSS |

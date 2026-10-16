@@ -126,7 +126,8 @@ and the following subsections.
 9. **Optional years after Gauntlet** — 30 points/year split across Art XP,
    Ability XP, and extra spell levels. Each lab season costs 10 of those 30
    (min 0 if three or four seasons). Aging rolls from the Winter after 35
-   (player supplies the die; the engine applies the table).
+   (player supplies the die, living conditions, and Longevity Ritual per
+   winter; the engine applies the table).
    Optional 90-XP package: Artes Liberales 1, Latin 4, Magic Theory 3,
    Parma Magica 1.
 10. **Spells** — pick from the Core catalog, or a free name plus Technique,

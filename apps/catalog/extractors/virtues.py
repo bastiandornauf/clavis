@@ -11,31 +11,34 @@ from apps.library.models import Section
 from .common import SKIP_TITLE_RE, ExtractedEntry, _clean_body, _section_title
 from .creatures import CREATURE_LEAD_RE, CREATURE_LEAD_WINDOW
 
+# Longer alternative first, so "Major or Minor" is not cut down to "Major".
+_MAGNITUDE = r"Major\s+or\s+Minor|Minor\s+or\s+Major|Major|Minor|Free"
 # Classic Core: *Major, Hermetic* — Art & Academe: *Social Status, Major*
+# Personality flaws: *Major or Minor, Personality*
 VF_ITALIC_RE = re.compile(
-    r"^\*(?:"
-    r"(?P<mag_first>Major|Minor|Free),\s*(?P<cat_after>[^*]+)"
-    r"|"
-    r"(?P<cat_before>[^*]+?),\s*(?P<mag_after>Major|Minor|Free)"
-    r")\*",
+    rf"^\*(?:"
+    rf"(?P<mag_first>{_MAGNITUDE}),\s*(?P<cat_after>[^*]+)"
+    rf"|"
+    rf"(?P<cat_before>[^*]+?),\s*(?P<mag_after>{_MAGNITUDE})"
+    rf")\*",
     re.I | re.M,
 )
 VF_PLAIN_RE = re.compile(
-    r"^(?P<mag>Major|Minor|Free)\s+(?P<cat>.+?)\s+(?P<kind>Virtue|Flaw)\b",
+    rf"^(?P<mag>{_MAGNITUDE})\s+(?P<cat>.+?)\s+(?P<kind>Virtue|Flaw)\b",
     re.I | re.M,
 )
 VF_ALT_RE = re.compile(
-    r"^(?P<mag>Major|Minor|Free)\s+(?P<kind>Virtue|Flaw)\b(?:,\s*(?P<cat>.+))?",
+    rf"^(?P<mag>{_MAGNITUDE})\s+(?P<kind>Virtue|Flaw)\b(?:,\s*(?P<cat>.+))?",
     re.I | re.M,
 )
 # Art & Academe university chapter: **Jurist**<br>\n*Social Status, Minor*
 VF_BOLD_BLOCK_RE = re.compile(
-    r"^\*\*(?P<name>[^*]{2,90})\*\*(?:<br\s*/?>)?\s*\n"
-    r"\*(?:"
-    r"(?P<mag_first>Major|Minor|Free),\s*(?P<cat_after>[^*]+)"
-    r"|"
-    r"(?P<cat_before>[^*]+?),\s*(?P<mag_after>Major|Minor|Free)"
-    r")\*",
+    rf"^\*\*(?P<name>[^*]{{2,90}})\*\*(?:<br\s*/?>)?\s*\n"
+    rf"\*(?:"
+    rf"(?P<mag_first>{_MAGNITUDE}),\s*(?P<cat_after>[^*]+)"
+    rf"|"
+    rf"(?P<cat_before>[^*]+?),\s*(?P<mag_after>{_MAGNITUDE})"
+    rf")\*",
     re.I | re.M,
 )
 
@@ -111,6 +114,15 @@ def _virtue_or_flaw_from_ancestors(section: Section) -> str:
     return ""
 
 
+def _split_magnitudes(mag: str) -> list[str]:
+    """'Major or Minor' is stored as two ordinary magnitudes, Minor then Major."""
+    folded = re.sub(r"\s+", " ", mag).strip().casefold()
+    if folded in {"major or minor", "minor or major"}:
+        return ["Minor", "Major"]
+    titled = mag.strip().title()
+    return [titled] if titled else []
+
+
 def _vf_entry(
     *,
     section: Section,
@@ -119,18 +131,49 @@ def _vf_entry(
     mag: str,
     category: str,
     evidence: str,
+    slug: str = "",
 ) -> ExtractedEntry:
     summary_parts = [p for p in (mag, category) if p]
     return ExtractedEntry(
         entry_type=kind,
         name=name,
-        slug=slugify(name)[:200] or kind,
+        slug=slug or slugify(name)[:200] or kind,
         summary=", ".join(summary_parts),
         section=section,
         magnitude=mag,
         category=category,
         evidence=evidence,
     )
+
+
+def _vf_entries(
+    *,
+    section: Section,
+    kind: str,
+    name: str,
+    mag: str,
+    category: str,
+    evidence: str,
+) -> list[ExtractedEntry]:
+    magnitudes = _split_magnitudes(mag)
+    if not magnitudes:
+        return []
+    # One section may yield both sizes. The catalog key is type + slug + section,
+    # so the two sizes need distinct slugs. A single size keeps the plain name slug.
+    base = slugify(name)[:180] or kind
+    either = len(magnitudes) > 1
+    return [
+        _vf_entry(
+            section=section,
+            kind=kind,
+            name=name,
+            mag=magnitude,
+            category=category,
+            evidence=evidence,
+            slug=f"{base}-{magnitude.lower()}" if either else base,
+        )
+        for magnitude in magnitudes
+    ]
 
 
 def _extract_vf_bold_blocks(section: Section, kind: str) -> list[ExtractedEntry]:
@@ -150,8 +193,8 @@ def _extract_vf_bold_blocks(section: Section, kind: str) -> list[ExtractedEntry]
         mag, category = _vf_italic_groups(match)
         category, own_kind = _split_category_kind(category)
         seen.add(key)
-        out.append(
-            _vf_entry(
+        out.extend(
+            _vf_entries(
                 section=section,
                 kind=own_kind or kind,
                 name=name,
@@ -163,14 +206,14 @@ def _extract_vf_bold_blocks(section: Section, kind: str) -> list[ExtractedEntry]
     return out
 
 
-def extract_virtue_or_flaw(section: Section) -> ExtractedEntry | None:
+def extract_virtue_or_flaw(section: Section) -> list[ExtractedEntry]:
     title = _section_title(section)
     if SKIP_TITLE_RE.match(title):
-        return None
+        return []
     if section.level < 3:
-        return None
+        return []
     if CREATURE_LEAD_RE.search(section.body_markdown[:CREATURE_LEAD_WINDOW]):
-        return None
+        return []
 
     body = _clean_body(section.body_markdown)
     head = body[:400]
@@ -190,7 +233,7 @@ def extract_virtue_or_flaw(section: Section) -> ExtractedEntry | None:
         # Italic lines without a virtues/flaws path or chapter context are too
         # ambiguous (story text, lists, house mysteries).
         if not kind:
-            return None
+            return []
 
     if not kind:
         plain = VF_PLAIN_RE.search(head)
@@ -209,11 +252,11 @@ def extract_virtue_or_flaw(section: Section) -> ExtractedEntry | None:
             evidence = alt.group(0)
 
     if kind not in {"virtue", "flaw"}:
-        return None
+        return []
     if not mag:
-        return None
+        return []
 
-    return _vf_entry(
+    return _vf_entries(
         section=section,
         kind=kind,
         name=title,
@@ -231,11 +274,11 @@ def extract_virtues_and_flaws(section: Section) -> list[ExtractedEntry]:
     kind = _virtue_or_flaw_from_ancestors(section)
     results = _extract_vf_bold_blocks(section, kind) if kind else []
 
-    single = extract_virtue_or_flaw(section)
-    if single is None:
+    singles = extract_virtue_or_flaw(section)
+    if not singles:
         return results
 
     names = {entry.name.casefold() for entry in results}
-    if single.name.casefold() not in names:
-        results.insert(0, single)
+    if singles[0].name.casefold() not in names:
+        results = [*singles, *results]
     return results

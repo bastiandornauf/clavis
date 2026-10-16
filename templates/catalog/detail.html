@@ -117,7 +117,7 @@
         <li>
           <a href="{% url 'reader:section' hit.section.book.slug hit.section.path %}">{{ hit.section.display_title }}</a>
           <span class="meta">· {{ hit.section.book.title }}</span>
-          <p class="meta">{{ hit.snippet|safe }}</p>
+          <p class="passage">{{ hit.snippet|safe }}</p>
         </li>
       {% endfor %}
     </ul>
