@@ -1,0 +1,9 @@
+{% if applied.extra_xp %}
+  <p class="notice" role="status">
+    Extra XP from Virtues: {{ applied.extra_xp }}. Spend it on the abilities those Virtues name
+    (Educated: Latin and Artes Liberales; Warrior: Martial; and so on).
+  </p>
+{% endif %}
+<div id="score-editor">
+  {% include "chargen/score_rows.html" with rows=later_rows prefix="later" ability_choices=ability_choices %}
+</div>

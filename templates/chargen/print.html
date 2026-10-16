@@ -1,0 +1,18 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ state.name|default:"Unnamed character" }} · sheet</title>
+  <link rel="stylesheet" href="{% static 'css/clavis.css' %}">
+  <link rel="stylesheet" href="{% static 'css/chargen.css' %}">
+</head>
+<body class="cg-print-page">
+  <p class="cg-print-bar">
+    <button type="button" onclick="window.print()">Print</button>
+    <a href="{% url 'chargen:new' %}?step=sheet">Back to ClavisGen</a>
+  </p>
+  {% include "chargen/sheet_doc.html" %}
+</body>
+</html>

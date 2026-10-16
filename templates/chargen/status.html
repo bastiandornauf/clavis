@@ -1,0 +1,10 @@
+<div id="cg-status" class="cg-status" role="status" hx-swap-oob="true">
+  {% if meter_line %}
+    <p id="cg-meter" class="cg-meter">{{ meter_line }}</p>
+  {% else %}
+    <p id="cg-meter" class="cg-meter"></p>
+  {% endif %}
+</div>
+{% if focus_gaps %}
+  <script>document.getElementById("cg-open")?.focus();</script>
+{% endif %}

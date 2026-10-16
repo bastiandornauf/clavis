@@ -17,4 +17,5 @@ urlpatterns = [
     path("sources/", include("apps.sources.urls")),
     path("annotations/", include("apps.annotations.urls")),
     path("campaigns/", include("apps.campaigns.urls")),
+    path("gen/", include("apps.chargen.urls")),
 ]

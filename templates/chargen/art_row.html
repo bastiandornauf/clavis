@@ -1,0 +1,22 @@
+<tr>
+  <td>{{ row.name }}</td>
+  <td>
+    <label class="visually-hidden" for="{{ prefix }}-{{ row.key }}">{{ row.name }} score</label>
+    {% if phase == "after" %}
+      <input id="{{ prefix }}-{{ row.key }}" class="score-input chargen-live" type="number" name="{{ prefix }}_{{ row.key }}" value="{{ row.raw_score }}" min="{{ row.paid_score }}" hx-preserve>
+    {% else %}
+      <input id="{{ prefix }}-{{ row.key }}" class="score-input chargen-live" type="number" name="{{ prefix }}_{{ row.key }}" value="{{ row.bought_score }}" min="0" hx-preserve>
+    {% endif %}
+  </td>
+  <td>
+    <label class="visually-hidden" for="{{ prefix }}-xp-{{ row.key }}">{{ row.name }} experience toward the next score</label>
+    {% if phase == "after" %}
+      <input id="{{ prefix }}-xp-{{ row.key }}" class="score-input chargen-live" type="number" name="{{ prefix }}_xp_{{ row.key }}" value="{{ row.raw_toward }}" min="0" hx-preserve>
+    {% else %}
+      <input id="{{ prefix }}-xp-{{ row.key }}" class="score-input chargen-live" type="number" name="{{ prefix }}_xp_{{ row.key }}" value="{{ row.bought_toward }}" min="0" hx-preserve>
+    {% endif %}
+  </td>
+  <td class="meta">
+    <span id="xp-{{ prefix }}-{{ row.key }}">{% if phase == "after" %}{% if row.after %}+{{ row.after }}{% endif %}{% elif row.spent %}+{{ row.spent }}{% endif %}</span>
+  </td>
+</tr>

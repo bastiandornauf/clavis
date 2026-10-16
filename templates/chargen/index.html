@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="page-title">ClavisGen</h1>
+  <p class="lede">
+    You choose every Virtue, score, and spell. ClavisGen walks the Core steps,
+    writes the sheet, and does the arithmetic.
+  </p>
+
+  {% if not core_book %}
+    <div class="empty-state">
+      ClavisGen needs the Definitive Edition Core Rules in your library.
+      <a href="{% url 'sources:status' %}">Open Sources</a> to import the Open License books.
+    </div>
+  {% else %}
+    {% if in_progress %}
+      <article class="cg-progress">
+        <h2>{{ progress_name|default:"Unnamed character" }}</h2>
+        <p>
+          {{ progress_type|default:"Character"|title }}
+          {% if progress_age %}· age {{ progress_age }}{% endif %}
+          · {{ progress_step }}
+        </p>
+        <p>
+          This browser holds one working copy. Start over replaces
+          {{ progress_name|default:"them" }}.
+          Save the sheet to Workspace to keep it.
+        </p>
+        <div class="chargen-cta">
+          <a class="button" href="{% url 'chargen:new' %}">Continue</a>
+          <form method="post" action="{% url 'chargen:reset' %}" onsubmit="return confirm('Discard this character and start from the beginning?');">
+            {% csrf_token %}
+            <button type="submit" class="secondary">Start over</button>
+          </form>
+        </div>
+      </article>
+    {% endif %}
+    {% if choosing_type %}
+      <p class="notice">
+        Choosing a type changes the character already in this browser.
+        Virtues and scores stay, and the next step names anything that no longer fits.
+      </p>
+    {% endif %}
+    <div class="chargen-cta chargen-cta--types">
+      {% for type in types %}
+        {% if confirm_new_type %}
+          <a class="cg-type-card" href="{% url 'chargen:home' %}?begin={{ type.key }}">
+            <strong>Create a {{ type.label }}</strong>
+            <span>{{ type.sentence }}</span>
+          </a>
+        {% else %}
+          <a class="cg-type-card" href="{% url 'chargen:new' %}?as={{ type.key }}">
+            <strong>Create a {{ type.label }}</strong>
+            <span>{{ type.sentence }}</span>
+          </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <p class="meta">
+      One working copy in this browser. Saved characters live in
+      <a href="{% url 'campaigns:workspace' %}?tab=characters">Workspace</a>.
+      Chapter 3 character templates are not in this version of ClavisGen.
+    </p>
+
+    <p class="meta">
+      A character is legal when it matches the
+      {% include "chargen/rule_link.html" with cite=paths.summary label="Detailed character creation" %}
+      rules, not a troupe house rule.
+    </p>
+  {% endif %}
+{% endblock %}

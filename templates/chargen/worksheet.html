@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% include "components/breadcrumbs.html" with breadcrumbs=breadcrumbs %}
+  <form id="cg-reset" method="post" action="{% url 'chargen:reset' %}" hidden onsubmit="return confirm('Discard this character and start from the beginning?');">
+    {% csrf_token %}
+  </form>
+
+  <div class="cg-frame">
+    <form
+      id="cg-form"
+      method="post"
+      class="cg-form"
+      hx-post="{% url 'chargen:new' %}"
+      hx-trigger="input delay:200ms, change"
+      hx-swap="none"
+      hx-sync="this:replace"
+      hx-indicator="#cg-form"
+    >
+      {% csrf_token %}
+      <input type="hidden" name="step" value="{{ step }}">
+      <input type="hidden" name="action" value="live">
+      <header class="cg-bar">
+        <h1>{{ step_n }}. {{ step_label }}</h1>
+      </header>
+      {% if step_brief %}
+        <p class="cg-brief">{{ step_brief }}</p>
+      {% endif %}
+      {% include "chargen/status.html" %}
+      <div class="cg-work">
+        {% include "chargen/steps/"|add:step|add:".html" %}
+      </div>
+      <div class="cg-actions">
+        <button type="submit" class="cg-quiet" form="cg-reset">Start over</button>
+        {% if prev_step %}
+          <button type="submit" name="action" value="back" class="secondary">Back</button>
+        {% endif %}
+        {% if next_step %}
+          <button
+            type="submit"
+            name="action"
+            value="next"
+            {% if focus_gaps and step_checklist %}aria-describedby="cg-continue-why"{% endif %}
+          >Continue</button>
+        {% endif %}
+        {% if focus_gaps and step_checklist %}
+          <p id="cg-continue-why" class="cg-actions__why">{{ step_checklist.0.message }}</p>
+        {% endif %}
+      </div>
+    </form>
+    {% if step != "sheet" %}
+      {% include "chargen/overview.html" %}
+    {% endif %}
+  </div>
+  {% if step == "sheet" %}
+    <form id="cg-save" method="post" action="{% url 'chargen:save' %}">
+      {% csrf_token %}
+    </form>
+    <form id="cg-pdf" method="post" action="{% url 'chargen:fill_pdf' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+    </form>
+    <form id="cg-play" method="post" action="{% url 'chargen:new' %}">
+      {% csrf_token %}
+      <input type="hidden" name="step" value="sheet">
+      <input type="hidden" name="action" value="save">
+    </form>
+  {% endif %}
+{% endblock %}

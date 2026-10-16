@@ -1,0 +1,9 @@
+<p class="notice" role="status">
+  {{ pool.left }} XP unspent of {{ pool.budget }}.
+  {% if pool.fits %}
+    That still buys {{ kind|default:"Ability" }} score
+    {% for item in pool.fits %}{{ item.score }} ({{ item.xp }} XP){% if not forloop.last %}, {% endif %}{% endfor %}.
+  {% else %}
+    Not enough for another {{ kind|default:"Ability" }} score.
+  {% endif %}
+</p>

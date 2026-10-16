@@ -1,0 +1,61 @@
+<div id="chargen-step-status" hx-swap-oob="true">
+  {% if step == "start" and kind %}
+    <p class="notice" role="status">
+      Later life at age {{ age }}:
+      {{ pools.later_life_years }} years × {{ pools.later_life_xp_per_year }} XP
+      = {{ pools.later_life_xp }} XP
+      {% if kind == "magus" %}
+        (childhood ends at 5; apprenticeship starts at {{ state.apprenticeship_start_age }}).
+        Then {{ pools.apprenticeship_xp }} apprenticeship XP and {{ pools.apprenticeship_spell_levels }} spell levels.
+      {% else %}
+        (age {{ age }} − 5 childhood years).
+      {% endif %}
+    </p>
+  {% elif step == "characteristics" %}
+    <p class="notice" role="status">
+      {{ remaining_char }} of {{ extra_points|add:7 }} characteristic points left.
+      {% if core_book %}
+        · {% include "chargen/rule_link.html" with cite=paths.characteristics label="Characteristics" %}
+      {% endif %}
+    </p>
+  {% elif step == "childhood" %}
+    {% include "chargen/pool_hint.html" with pool=childhood_pool kind="Ability" %}
+  {% elif step == "later_life" %}
+    <p class="notice" role="status">
+      {{ pools.later_life_years }} years × {{ pools.later_life_xp_per_year }} XP/year
+      = {{ later_pool.budget }} XP
+      {% if kind == "magus" %}
+        (age {{ age }}, childhood ends at 5, apprenticeship starts at {{ state.apprenticeship_start_age }}).
+      {% else %}
+        (age {{ age }} − 5 childhood years).
+      {% endif %}
+      {{ later_pool.left }} XP unspent.
+      {% if later_pool.fits %}
+        That still buys Ability score
+        {% for item in later_pool.fits %}{{ item.score }} ({{ item.xp }} XP){% if not forloop.last %}, {% endif %}{% endfor %}.
+      {% endif %}
+    </p>
+  {% elif step == "apprenticeship" %}
+    {% include "chargen/pool_hint.html" with pool=appr_pool kind="Ability" %}
+    <p class="meta">
+      The same leftover also buys Art score
+      {% if appr_art_pool.fits %}
+        {% for item in appr_art_pool.fits %}{{ item.score }} ({{ item.xp }} XP){% if not forloop.last %}, {% endif %}{% endfor %}.
+      {% else %}
+        only if enough remains.
+      {% endif %}
+    </p>
+  {% elif step == "spells" %}
+    <p class="notice" role="status">
+      {{ spell_left }} of {{ pools.apprenticeship_spell_levels }} spell levels left.
+      Each Technique and Form has its own cap.
+    </p>
+  {% elif step == "after" %}
+    {% include "chargen/pool_hint.html" with pool=after_pool kind="Ability" %}
+  {% elif step == "virtues" %}
+    <p class="notice" role="status">
+      {{ vf_totals.virtue_points }} Virtue points of {{ vf_totals.flaw_points }} Flaw points
+      · {{ vf_totals.remaining }} remaining.
+    </p>
+  {% endif %}
+</div>

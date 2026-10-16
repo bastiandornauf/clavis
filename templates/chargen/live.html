@@ -1,0 +1,72 @@
+{% include "chargen/overview.html" %}
+{% include "chargen/status.html" %}
+{% if step == "start" and kind == "magus" %}
+  {% include "chargen/house_benefit.html" with oob=True %}
+{% endif %}
+{% if step == "virtues" %}
+  {% include "chargen/house_benefit.html" with oob=True %}
+{% endif %}
+{% if step == "characteristics" %}
+  {% for row in char_rows %}
+    <span id="char-cost-{{ row.key }}" class="cg-meter" hx-swap-oob="true">{{ row.phrase }}</span>
+  {% endfor %}
+{% endif %}
+{% if refresh_editor and step == "later_life" %}
+  <div id="score-editor" hx-swap-oob="true">
+    {% include "chargen/score_rows.html" with rows=later_rows prefix="later" ability_choices=ability_choices %}
+  </div>
+{% elif step == "later_life" %}
+  {% for row in later_rows %}
+    <span id="xp-later-{{ row.oob_id }}" hx-swap-oob="true">{{ row.phase_note }}</span>
+    <span id="cap-later-{{ row.oob_id }}" class="warning" hx-swap-oob="true">{% if row.over_cap %}over cap{% endif %}</span>
+  {% endfor %}
+{% endif %}
+{% if refresh_editor and step == "childhood" %}
+  <div id="score-editor" hx-swap-oob="true">
+    {% include "chargen/childhood_editor.html" %}
+  </div>
+{% elif step == "childhood" %}
+  {% for row in childhood_rows %}
+    <span id="xp-child-{{ row.oob_id }}" hx-swap-oob="true">{{ row.phase_note }}</span>
+    <span id="cap-child-{{ row.oob_id }}" class="warning" hx-swap-oob="true">{% if row.over_cap %}over cap{% endif %}</span>
+  {% endfor %}
+{% endif %}
+{% if refresh_editor and step == "apprenticeship" %}
+  <div id="score-editor" hx-swap-oob="true">
+    {% include "chargen/score_rows.html" with rows=apprenticeship_rows prefix="appr" ability_choices=ability_choices %}
+  </div>
+{% elif step == "apprenticeship" %}
+  {% for row in apprenticeship_rows %}
+    <span id="xp-appr-{{ row.oob_id }}" hx-swap-oob="true">{{ row.phase_note }}</span>
+    <span id="cap-appr-{{ row.oob_id }}" class="warning" hx-swap-oob="true">{% if row.over_cap %}over cap{% endif %}</span>
+  {% endfor %}
+{% endif %}
+{% if refresh_editor and step == "after" %}
+  <div id="score-editor" hx-swap-oob="true">
+    {% include "chargen/score_rows.html" with rows=after_rows prefix="after" ability_choices=ability_choices %}
+  </div>
+{% elif step == "after" %}
+  {% for row in after_rows %}
+    <span id="xp-after-{{ row.oob_id }}" hx-swap-oob="true">{{ row.phase_note }}</span>
+    <span id="cap-after-{{ row.oob_id }}" class="warning" hx-swap-oob="true">{% if row.over_cap %}over cap{% endif %}</span>
+  {% endfor %}
+{% endif %}
+{% if step == "apprenticeship" %}
+  {% for row in arts %}
+    <span id="xp-art-{{ row.key }}" class="meta" hx-swap-oob="true">{% if row.spent %}+{{ row.spent }}{% endif %}</span>
+  {% endfor %}
+{% endif %}
+{% if step == "after" %}
+  {% for row in arts %}
+    <span id="xp-after_art-{{ row.key }}" class="meta" hx-swap-oob="true">{% if row.after %}+{{ row.after }}{% endif %}</span>
+  {% endfor %}
+  <p id="cg-after-math" class="cg-life" hx-swap-oob="true">{{ after_math }}</p>
+{% endif %}
+{% if step == "aging" %}
+  <div id="aging-assign" hx-swap-oob="true">
+    {% include "chargen/aging_assign.html" %}
+  </div>
+  <div id="aging-board" hx-swap-oob="true">
+    {% include "chargen/aging_board.html" %}
+  </div>
+{% endif %}

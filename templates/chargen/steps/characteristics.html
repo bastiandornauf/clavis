@@ -1,0 +1,61 @@
+<p class="meta">
+  {% include "chargen/rule_link.html" with cite=paths.characteristics label="Characteristics" %}
+</p>
+<div class="cg-chars">
+  <div>
+    <section>
+      <h2>Mental</h2>
+      <div class="cg-chars__row">
+        {% for row in char_rows %}
+          {% if row.key == "int" or row.key == "per" or row.key == "pre" or row.key == "com" %}
+            <div class="cg-score">
+              <label for="char-{{ row.key }}">{{ row.label }}</label>
+              <input id="char-{{ row.key }}" class="score-input chargen-live" type="number" name="{{ row.key }}" value="{{ row.bought }}" min="-3" max="3">
+              <span id="char-cost-{{ row.key }}" class="cg-meter">{{ row.phrase }}</span>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+    <section>
+      <h2>Physical</h2>
+      <div class="cg-chars__row">
+        {% for row in char_rows %}
+          {% if row.key == "str" or row.key == "sta" or row.key == "dex" or row.key == "qik" %}
+            <div class="cg-score">
+              <label for="char-{{ row.key }}">{{ row.label }}</label>
+              <input id="char-{{ row.key }}" class="score-input chargen-live" type="number" name="{{ row.key }}" value="{{ row.bought }}" min="-3" max="3">
+              <span id="char-cost-{{ row.key }}" class="cg-meter">{{ row.phrase }}</span>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+</div>
+{% if has_great or has_poor %}
+  <div class="cg-fields">
+    {% if has_great %}
+      <label>
+        Great Characteristic
+        <select class="chargen-live" name="great_target">
+          <option value="">Choose</option>
+          {% for row in char_rows %}
+            <option value="{{ row.key }}" {% if state.great_target == row.key %}selected{% endif %}>{{ row.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    {% endif %}
+    {% if has_poor %}
+      <label>
+        Poor Characteristic
+        <select class="chargen-live" name="poor_target">
+          <option value="">Choose</option>
+          {% for row in char_rows %}
+            <option value="{{ row.key }}" {% if state.poor_target == row.key %}selected{% endif %}>{{ row.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    {% endif %}
+  </div>
+{% endif %}

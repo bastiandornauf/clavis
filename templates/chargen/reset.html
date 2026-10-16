@@ -1,0 +1,9 @@
+<form
+  method="post"
+  action="{% url 'chargen:reset' %}"
+  class="chargen-reset"
+  onsubmit="return confirm('Discard this character and start from the beginning?');"
+>
+  {% csrf_token %}
+  <button type="submit" class="chargen-reset__btn">Start over</button>
+</form>

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% include "components/breadcrumbs.html" with breadcrumbs=breadcrumbs %}
+  <h1 class="page-title">{% if same_row %}Unsaved edits{% else %}Replace the working copy?{% endif %}</h1>
+  {% if same_row %}
+    <p>
+      This browser has edits to {{ working_name }} that are not in Workspace yet.
+      Opening the saved copy discards those edits. The Workspace row stays as last saved.
+    </p>
+  {% else %}
+    <p>
+      This browser holds {{ working_name }}{% if working_type %} ({{ working_type }}){% endif %}.
+      Opening {{ character.name }} replaces that working copy.
+      {% if working_saved %}
+        {{ working_name }} stays in Workspace.
+      {% else %}
+        {{ working_name }} has not been saved to Workspace. That draft is discarded.
+      {% endif %}
+    </p>
+  {% endif %}
+  <div class="chargen-cta">
+    <a class="button secondary" href="{% url 'chargen:new' %}">Keep {{ working_name }}</a>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit">{% if same_row %}Open saved copy{% else %}Open {{ character.name }}{% endif %}</button>
+    </form>
+  </div>
+{% endblock %}

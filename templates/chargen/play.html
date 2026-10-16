@@ -1,0 +1,57 @@
+<section class="cg-play">
+  <h2>Play</h2>
+  <p>
+    Soak {{ play_numbers.soak }}
+    · Encumbrance {{ play_numbers.encumbrance }}
+    · Fatigue {{ play_numbers.fatigue|join:", " }}
+  </p>
+  <p>
+    {% for row in play_numbers.wounds %}
+      {{ row.name }} {{ row.low }}{% if row.high %}–{{ row.high }}{% else %}+{% endif %}{% if not forloop.last %}, {% endif %}
+    {% endfor %}
+  </p>
+  <p>
+    {% for row in play_numbers.combat %}
+      {{ row.name }}: Init {{ row.init }}{% if row.attack != None %}, Atk {{ row.attack }}{% endif %}, Dfn {{ row.defense }}{% if row.damage != None %}, Dam {{ row.damage }}{% endif %}{% if not forloop.last %}<br>{% endif %}
+    {% endfor %}
+  </p>
+  {% if play_numbers.casting %}
+    {% for row in play_numbers.casting_rows %}
+      <p class="cg-play-line">
+        {{ row.label }} {{ row.value }}
+        <span class="cg-play-note">{{ row.note }}</span>
+      </p>
+    {% endfor %}
+    <p class="cg-play-note">
+      {% for line in play_numbers.casting_notes %}
+        {{ line }}{% if not forloop.last %}<br>{% endif %}
+      {% endfor %}
+    </p>
+    <div class="cg-tefo">
+      <table>
+        <caption class="visually-hidden">Casting Score</caption>
+        <thead>
+          <tr>
+            <th></th>
+            {% for fo in play_numbers.casting.table.forms %}
+              <th>{{ fo.abbrev }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in play_numbers.casting.table.rows %}
+            <tr>
+              <th>{{ row.abbrev }}</th>
+              {% for cell in row.cells %}
+                <td>
+                  {{ cell.formulaic }}
+                  <span>{{ cell.fatigue_spont }} / {{ cell.no_fatigue }}</span>
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</section>

@@ -1,0 +1,50 @@
+<div id="house-benefit"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {% if selected_house %}
+    <p class="cg-meter" role="status">House {{ selected_house.name }}: {{ selected_house.benefit }}</p>
+    {% if selected_house.choices %}
+      <label>
+        House benefit
+        <select
+          name="house_choice"
+          hx-post="{% url 'chargen:new' %}"
+          hx-trigger="change"
+          hx-include="#cg-form"
+          hx-vals='{"action": "live"}'
+          hx-swap="none"
+        >
+          <option value="">Choose</option>
+          {% for pick in selected_house.choices %}
+            <option value="{{ pick.slug }}|{{ pick.target }}" {% if state.house_choice == pick.slug|add:"|"|add:pick.target %}selected{% endif %}>{{ pick.name }}{% if pick.target %} ({{ pick.target }}){% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+    {% endif %}
+    {% if house_grant_line %}
+      <p class="meta">On the sheet: {{ house_grant_line }}</p>
+    {% endif %}
+    {% if step == "virtues" and house_suggestions %}
+      <ul class="cg-pick cg-pick--line">
+        {% for item in house_suggestions %}
+          <li>
+            <span class="cg-pick__name">{{ item.name }}</span>
+            <span class="cg-pick__meta">{{ item.magnitude }}</span>
+            <button type="submit" name="add_slug" value="{{ item.slug }}" class="cg-row-action">Add</button>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if step == "virtues" and selected_house.open_slots %}
+      <p class="meta">
+        <button
+          type="button"
+          class="cg-row-action"
+          hx-get="{% url 'chargen:new' %}?step=virtues&amp;kind=virtue&amp;vf_magnitude=Minor"
+          hx-select="#vf-catalog"
+          hx-target="#vf-catalog"
+          hx-swap="outerHTML"
+          hx-trigger="click consume"
+        >Browse Minor Virtues</button>
+      </p>
+    {% endif %}
+  {% endif %}
+</div>

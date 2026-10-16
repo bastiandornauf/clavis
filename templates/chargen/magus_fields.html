@@ -1,0 +1,20 @@
+<div id="chargen-magus-fields">
+  {% if kind == "magus" %}
+    <div class="cg-fields cg-fields--2">
+      <label>
+        House
+        <select class="chargen-live" name="house">
+          <option value="">Choose a House</option>
+          {% for house in houses %}
+            <option value="{{ house.name }}" {% if state.house == house.name %}selected{% endif %}>{{ house.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Apprenticeship starts at age
+        <input class="chargen-live" type="number" name="apprenticeship_start_age" value="{{ state.apprenticeship_start_age }}" min="5" max="40">
+      </label>
+    </div>
+    {% include "chargen/house_benefit.html" %}
+  {% endif %}
+</div>

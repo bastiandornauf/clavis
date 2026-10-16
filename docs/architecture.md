@@ -12,8 +12,9 @@ into a readable, searchable library with personal campaign overlays.
 | `apps.reader` | TOC, section rendering, navigation |
 | `apps.search` | SQLite FTS5 + optional section embeddings (keyword / semantic / hybrid) |
 | `apps.annotations` | Bookmarks, notes, last-read position (lists live under Workspace) |
-| `apps.campaigns` | Workspace hub (campaigns / bookmarks / notes tabs) + campaign detail |
+| `apps.campaigns` | Workspace hub (campaigns / characters / bookmarks / notes tabs) + campaign detail |
 | `apps.catalog` | Rule-based lexicon (incl. beasts, boons/hooks, orgs, places, items) + reviewable enrichment leftovers |
+| `apps.chargen` | ClavisGen (`/gen/`): Core character creation; `/gen/new/` is a session worksheet. Saved sheets are Workspace overlays (`Character` JSON), not Lexicon rows. Print, Markdown, JSON, and PDF fill (user-uploaded AcroForm only) are views of the same sheet; optional play numbers stay off the posted document. Reads Lexicon + Reader, does not copy book text |
 
 Shared library code lives under `src/clavis/`:
 

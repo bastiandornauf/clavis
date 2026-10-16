@@ -1,0 +1,52 @@
+<div id="spell-catalog">
+  <p class="filter-count">
+    {{ spell_match_count }} spell{{ spell_match_count|pluralize }} you can learn
+    {% if spell_match_count %}· {{ spell_page_start }}–{{ spell_page_end }}{% endif %}
+    {% if spell_pages > 1 %}· {{ spell_page }}/{{ spell_pages }}{% endif %}
+  </p>
+  <ul class="cg-pick cg-pick--line">
+    {% for entry in spell_catalog %}
+      <li>
+        <span class="cg-pick__name">{{ entry.name }}</span>
+        <span class="cg-pick__meta">{{ entry.technique }} {{ entry.form }}{% if not entry.needs_level %} {{ entry.level }}{% endif %} · cap {{ entry.cap }}</span>
+        {% if entry.needs_level %}
+          <input
+            class="cg-level"
+            type="number"
+            name="{{ spell_level_prefix }}spell_level_{{ entry.stable_id }}"
+            min="1"
+            max="{{ entry.cap }}"
+            placeholder="Level"
+            aria-label="Level for {{ entry.name }}"
+          >
+        {% endif %}
+        {% include "chargen/rule_link.html" with cite=entry.section_path label=entry.name quiet=True %}
+        <button type="submit" name="{{ spell_add_name }}" value="{{ entry.stable_id }}" class="cg-row-action">Add</button>
+      </li>
+    {% empty %}
+      <li class="empty-state">No Core spell you can learn with these Arts.</li>
+    {% endfor %}
+  </ul>
+  {% if spell_pages > 1 %}
+    <nav class="cg-pager" aria-label="Spell pages">
+      {% if spell_prev_page %}
+        <a
+          href="?{{ spell_prev_qs }}"
+          hx-get="{% url 'chargen:new' %}?{{ spell_prev_qs }}"
+          hx-select="#spell-catalog"
+          hx-target="#spell-catalog"
+          hx-swap="outerHTML"
+        >Previous</a>
+      {% endif %}
+      {% if spell_next_page %}
+        <a
+          href="?{{ spell_next_qs }}"
+          hx-get="{% url 'chargen:new' %}?{{ spell_next_qs }}"
+          hx-select="#spell-catalog"
+          hx-target="#spell-catalog"
+          hx-swap="outerHTML"
+        >Next</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+</div>

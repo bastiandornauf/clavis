@@ -1,0 +1,17 @@
+{% if aging_slots %}
+  <fieldset class="cg-fields">
+    <legend>Aging points</legend>
+    <p class="meta">Each point came up as any Characteristic. Choose where it lands.</p>
+    {% for slot in aging_slots %}
+      <label>
+        Aging point {{ forloop.counter }}
+        <select class="chargen-live" name="aging_assign">
+          <option value="">Unassigned</option>
+          {% for row in char_rows %}
+            <option value="{{ row.key }}" {% if slot == row.key %}selected{% endif %}>{{ row.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    {% endfor %}
+  </fieldset>
+{% endif %}

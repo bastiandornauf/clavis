@@ -1,0 +1,140 @@
+{% if suggested_groups %}
+  <section class="cg-first-move">
+    {% for group in suggested_groups %}
+      {% if group.heading %}
+        <h2>{{ group.heading }}</h2>
+      {% endif %}
+      <ul class="cg-pick cg-pick--line">
+        {% for item in group.items %}
+          <li>
+            <span class="cg-pick__name">{{ item.name }}</span>
+            <span class="cg-pick__meta">{{ item.magnitude }}</span>
+            <input
+              type="text"
+              class="cg-note"
+              name="add_target_{{ item.slug }}"
+              placeholder="{{ item.note_label }}"
+              aria-label="{{ item.note_label }} for {{ item.name }}"
+            >
+            <button type="submit" name="add_slug" value="{{ item.slug }}" class="cg-row-action">Add</button>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endfor %}
+  </section>
+{% endif %}
+
+{% if chosen_virtues %}
+  <section class="cg-picked">
+    <h2>Chosen</h2>
+    <ul class="cg-pick cg-pick--line">
+      {% for pick in chosen_virtues %}
+        <li>
+          <span class="cg-pick__name">{{ pick.name }}{% if pick.target and not pick.note_label %} ({{ pick.target }}){% endif %}</span>
+          <span class="cg-pick__meta">{{ pick.magnitude }}{% if pick.house_grant %} · House{% endif %}</span>
+          {% if pick.note_label %}
+            <input
+              type="text"
+              class="cg-note chargen-live"
+              name="vf_note_{{ forloop.counter0 }}"
+              value="{{ pick.target }}"
+              placeholder="{{ pick.note_label }}"
+              aria-label="{{ pick.note_label }} for {{ pick.name }}"
+            >
+          {% endif %}
+          {% if pick.path %}
+            {% include "chargen/rule_link.html" with cite=pick.path label=pick.name quiet=True %}
+          {% endif %}
+          {% if pick.house_slot_offer %}
+            <button type="submit" name="house_slot" value="{{ forloop.counter0 }}" class="cg-row-action">House benefit</button>
+          {% endif %}
+          <button type="submit" name="remove_index" value="{{ forloop.counter0 }}" class="cg-row-action">Remove</button>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+
+{% include "chargen/house_benefit.html" %}
+
+<div id="vf-finder" class="vf-finder">
+  <h2>Search the Lexicon</h2>
+  {% if form_notice %}
+    <p class="notice" role="status">{{ form_notice }}</p>
+  {% endif %}
+  <div class="filter-bar vf-filter">
+    <label>
+      Kind
+      <select
+        name="kind"
+        hx-get="{% url 'chargen:new' %}"
+        hx-vals='{"step": "virtues"}'
+        hx-include=".vf-filter"
+        hx-select="#vf-catalog"
+        hx-target="#vf-catalog"
+        hx-swap="outerHTML"
+        hx-trigger="change consume"
+      >
+        <option value="virtue" {% if vf_kind == "virtue" %}selected{% endif %}>Virtues</option>
+        <option value="flaw" {% if vf_kind == "flaw" %}selected{% endif %}>Flaws</option>
+      </select>
+    </label>
+    <label>
+      Magnitude
+      <select
+        name="vf_magnitude"
+        hx-get="{% url 'chargen:new' %}"
+        hx-vals='{"step": "virtues"}'
+        hx-include=".vf-filter"
+        hx-select="#vf-catalog"
+        hx-target="#vf-catalog"
+        hx-swap="outerHTML"
+        hx-trigger="change consume"
+      >
+        <option value="">Any</option>
+        <option value="Minor" {% if vf_magnitude == "Minor" %}selected{% endif %}>Minor</option>
+        <option value="Major" {% if vf_magnitude == "Major" %}selected{% endif %}>Major</option>
+        <option value="Free" {% if vf_magnitude == "Free" %}selected{% endif %}>Free</option>
+      </select>
+    </label>
+    <label>
+      Category
+      <select
+        name="vf_category"
+        hx-get="{% url 'chargen:new' %}"
+        hx-vals='{"step": "virtues"}'
+        hx-include=".vf-filter"
+        hx-select="#vf-catalog"
+        hx-target="#vf-catalog"
+        hx-swap="outerHTML"
+        hx-trigger="change consume"
+      >
+        <option value="">Any</option>
+        {% for cat in vf_categories %}
+          <option value="{{ cat }}" {% if vf_category == cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Name
+      <input
+        type="search"
+        name="vf_q"
+        value="{{ vf_query }}"
+        placeholder="Search by name"
+        hx-get="{% url 'chargen:new' %}"
+        hx-vals='{"step": "virtues"}'
+        hx-include=".vf-filter"
+        hx-select="#vf-catalog"
+        hx-target="#vf-catalog"
+        hx-swap="outerHTML"
+        hx-trigger="input delay:300ms consume, search consume"
+      >
+    </label>
+  </div>
+  <p class="meta">
+    {% include "chargen/rule_link.html" with cite=paths.virtues_flaws label="Virtues and Flaws" %}
+  </p>
+  <input type="hidden" name="add_kind" value="{{ vf_kind }}">
+  {% include "chargen/vf_catalog.html" %}
+</div>

@@ -6,13 +6,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% if page_title %}{{ page_title }} · {% endif %}{{ clavis_app_name }}</title>
   <link rel="stylesheet" href="{% static 'css/clavis.css' %}">
+  {% if chargen_home %}
+    <link rel="stylesheet" href="{% static 'css/chargen.css' %}">
+  {% endif %}
   <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
     <div class="site-header__inner">
-      <a class="brand" href="{% url 'library:index' %}" title="{{ clavis_tagline }}">
+      <a class="brand" href="{% if chargen_home %}{% url 'chargen:home' %}{% else %}{% url 'library:index' %}{% endif %}" title="{{ clavis_tagline }}">
         {{ clavis_app_name }}
         <span class="brand__tag">{{ clavis_tagline }}</span>
       </a>
@@ -26,12 +29,14 @@
         </div>
         <div class="nav-group" role="group" aria-label="Prepare">
           <a href="{% url 'campaigns:workspace' %}" {% if request.resolver_match.app_name == 'campaigns' or request.resolver_match.app_name == 'annotations' %}aria-current="page"{% endif %}>Workspace</a>
+          <a href="{% url 'chargen:home' %}" {% if request.resolver_match.app_name == 'chargen' %}aria-current="page"{% endif %}>ClavisGen</a>
         </div>
         <div class="nav-group" role="group" aria-label="System">
           <a href="{% url 'sources:status' %}" {% if request.resolver_match.app_name == 'sources' %}aria-current="page"{% endif %}>Sources</a>
         </div>
       </nav>
 
+      {% if not chargen_home %}
       <div class="header-tools">
         <form class="header-search" method="get" action="{% url 'search:index' %}" role="search">
           <label class="visually-hidden" for="header-q">Search all books</label>
@@ -57,6 +62,7 @@
           </label>
         </form>
       </div>
+      {% endif %}
     </div>
   </header>
 
@@ -73,17 +79,34 @@
 
   <footer class="site-footer">
     <div class="site-footer__inner">
-      <p>
-        {{ clavis_app_name }} is independent software (MIT).
-        Source:
-        <a href="{{ clavis_app_repo_url }}">{{ clavis_app_repo_url }}</a>
-      </p>
-      <p>
-        Ars Magica text is ©1993–2024, licensed by Trident, Inc. d/b/a Atlas Games® under
-        <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.
-        See <a href="https://atlas-games.com/arsmagica/openars">Atlas Games Open Ars</a>
-        and this project’s <a href="{% url 'notice' %}">Notices</a> for attribution details.
-      </p>
+      {% if chargen_home %}
+        <details class="site-footer__fold">
+          <summary>Notices</summary>
+          <p>
+            {{ clavis_app_name }} is independent software (MIT).
+            Source:
+            <a href="{{ clavis_app_repo_url }}">{{ clavis_app_repo_url }}</a>
+          </p>
+          <p>
+            Ars Magica text is ©1993–2024, licensed by Trident, Inc. d/b/a Atlas Games® under
+            <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.
+            See <a href="https://atlas-games.com/arsmagica/openars">Atlas Games Open Ars</a>
+            and this project’s <a href="{% url 'notice' %}">Notices</a> for attribution details.
+          </p>
+        </details>
+      {% else %}
+        <p>
+          {{ clavis_app_name }} is independent software (MIT).
+          Source:
+          <a href="{{ clavis_app_repo_url }}">{{ clavis_app_repo_url }}</a>
+        </p>
+        <p>
+          Ars Magica text is ©1993–2024, licensed by Trident, Inc. d/b/a Atlas Games® under
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.
+          See <a href="https://atlas-games.com/arsmagica/openars">Atlas Games Open Ars</a>
+          and this project’s <a href="{% url 'notice' %}">Notices</a> for attribution details.
+        </p>
+      {% endif %}
     </div>
   </footer>
 </body>

@@ -1,0 +1,57 @@
+<article class="cg-sheet-doc">
+  <header class="cg-sheet-doc__head">
+    <h2 class="cg-sheet-doc__name">{{ state.name|default:"Unnamed character" }}</h2>
+    <p class="cg-sheet-doc__identity">{{ sheet.identity }}</p>
+  </header>
+
+  <h2>Characteristics</h2>
+  <p>{{ sheet.char_mental }}<br>{{ sheet.char_physical }}</p>
+  {% if sheet.aging_points %}<p>{{ sheet.aging_points }}</p>{% endif %}
+  {% if not print_view %}
+    {% if aging_any or aging_crises %}
+      <p>
+        {% if aging_crises %}{{ aging_crises }} aging crisis{% if aging_crises != 1 %}es{% endif %}{% endif %}
+        {% if aging_crises and aging_any %} · {% endif %}
+        {% if aging_any %}
+          {{ aging_any }} aging point{{ aging_any|pluralize }} not yet assigned.
+          <a href="{% url 'chargen:new' %}?step=aging">Choose the Characteristic</a>
+        {% endif %}
+      </p>
+    {% endif %}
+  {% endif %}
+
+  <h2>Virtues and Flaws</h2>
+  {% if sheet.concept %}<p>{{ sheet.concept }}</p>{% endif %}
+  <p>{{ sheet.virtue_line|default:"None" }}</p>
+
+  <h2>Abilities</h2>
+  <p>{{ sheet.ability_line|default:"None" }}</p>
+
+  {% if kind == "magus" %}
+    <h2>Arts</h2>
+    <p>
+      {% for line in sheet.art_lines %}
+        {{ line }}{% if not forloop.last %}<br>{% endif %}
+      {% endfor %}
+    </p>
+    <h2>Spells</h2>
+    <p>
+      {% for line in sheet.spell_lines %}
+        {{ line }}{% if not forloop.last %}<br>{% endif %}
+      {% empty %}
+        None
+      {% endfor %}
+    </p>
+  {% endif %}
+
+  <h2>Personality</h2>
+  <p>{{ sheet.personality_line|default:"None" }}</p>
+  {% if sheet.reputation %}<p>Reputation: {{ sheet.reputation }}</p>{% endif %}
+
+  <h2>Equipment</h2>
+  <p>{% if sheet.equipment %}{{ sheet.equipment|linebreaksbr }}{% else %}None{% endif %}</p>
+
+  {% if state.show_play %}
+    {% include "chargen/play.html" %}
+  {% endif %}
+</article>

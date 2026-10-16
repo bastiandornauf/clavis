@@ -1,0 +1,69 @@
+<p class="score-legend">Cap {{ ability_cap }} at age {{ age }}. Toward next need not complete the next score.</p>
+<table class="score-table">
+  <thead>
+    <tr>
+      <th>Ability</th>
+      <th>Before</th>
+      <th>Score</th>
+      <th>Toward next</th>
+      <th>This phase</th>
+      <th>Specialty</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+      <tr>
+        <td>
+          <label class="visually-hidden" for="{{ prefix }}-name-{{ forloop.counter }}">Ability</label>
+          <input id="{{ prefix }}-name-{{ forloop.counter }}" class="chargen-live" type="text" name="{{ prefix }}_name" value="{{ row.name }}">
+        </td>
+        <td class="meta">{{ row.paid_score }}</td>
+        <td>
+          <label class="visually-hidden" for="{{ prefix }}-score-{{ forloop.counter }}">Score</label>
+          <input id="{{ prefix }}-score-{{ forloop.counter }}" class="score-input chargen-live" type="number" name="{{ prefix }}_score" value="{{ row.score }}" min="{{ row.min_score|default:0 }}" max="20">
+          <span id="cap-{{ prefix }}-{{ row.oob_id }}" class="warning">{% if row.over_cap %}over cap{% endif %}</span>
+        </td>
+        <td>
+          <label class="visually-hidden" for="{{ prefix }}-xp-{{ forloop.counter }}">Toward the next score</label>
+          <input id="{{ prefix }}-xp-{{ forloop.counter }}" class="score-input chargen-live" type="number" name="{{ prefix }}_xp" value="{{ row.toward }}" min="0">
+        </td>
+        <td class="meta"><span id="xp-{{ prefix }}-{{ row.oob_id }}">{{ row.phase_note }}</span></td>
+        <td>
+          <label class="visually-hidden" for="{{ prefix }}-spec-{{ forloop.counter }}">Specialty</label>
+          <input id="{{ prefix }}-spec-{{ forloop.counter }}" class="chargen-live" type="text" name="{{ prefix }}_spec" value="{{ row.specialty }}">
+        </td>
+        <td>
+          {% if row.removable %}
+            <button type="submit" name="{{ prefix }}_remove" value="{{ row.name }}" class="cg-row-action">Remove</button>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    <tr>
+      <td colspan="6">
+        <div class="ability-pick">
+          <label class="visually-hidden" for="{{ prefix }}-name-new">Core Ability</label>
+          {% if ability_choices %}
+            <select id="{{ prefix }}-name-new" name="{{ prefix }}_name_new">
+              <option value="">Choose a Core Ability</option>
+              {% regroup ability_choices by category as ability_groups %}
+              {% for group in ability_groups %}
+                <optgroup label="{{ group.grouper }}">
+                  {% for item in group.list %}
+                    <option value="{{ item.name }}">{{ item.name }}</option>
+                  {% endfor %}
+                </optgroup>
+              {% endfor %}
+            </select>
+          {% endif %}
+          <label class="visually-hidden" for="{{ prefix }}-name-custom">Custom Ability</label>
+          <input id="{{ prefix }}-name-custom" type="text" name="{{ prefix }}_name_custom" placeholder="Or type a custom Ability">
+        </div>
+      </td>
+      <td>
+        <button type="submit" name="action" value="add_row" class="cg-row-action">Add</button>
+      </td>
+    </tr>
+  </tbody>
+</table>

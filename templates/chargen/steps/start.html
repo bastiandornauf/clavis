@@ -1,0 +1,36 @@
+<input type="hidden" name="character_type" value="{{ state.character_type }}">
+<p class="cg-type">
+  {{ kind|title }}
+  <a href="{% url 'chargen:home' %}?choose=1">Choose a different type</a>
+</p>
+{% if type_notes %}
+  <div class="notice" role="status">
+    {% for note in type_notes %}
+      <p>{{ note }}</p>
+    {% endfor %}
+  </div>
+{% endif %}
+<div class="cg-fields">
+  <label class="cg-field-span">
+    Concept
+    <textarea name="concept" rows="2">{{ state.concept }}</textarea>
+  </label>
+  <label>
+    Name
+    <input type="text" name="name" value="{{ state.name }}" required>
+  </label>
+  <label>
+    Age
+    <input class="chargen-live" type="number" name="age" value="{{ state.age }}" min="0" max="120">
+  </label>
+  <label>
+    Native language
+    <input class="chargen-live" type="text" name="native_language" value="{{ state.native_language }}" placeholder="Italian">
+  </label>
+</div>
+{% if kind == "magus" %}
+  {% include "chargen/magus_fields.html" %}
+{% endif %}
+<p class="meta">
+  {% include "chargen/rule_link.html" with cite=paths.summary label="Detailed character creation" %}
+</p>

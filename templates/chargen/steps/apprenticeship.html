@@ -1,0 +1,24 @@
+<section class="cg-block">
+  <h2>Required to join the Order</h2>
+  <p>Parma Magica 1, Magic Theory 1, and Latin 1 are in the table so you can raise them. They are not the recommended package.</p>
+</section>
+<section class="cg-block">
+  <h2>Recommended</h2>
+  <label class="cg-checkline">
+    <input class="chargen-live" type="checkbox" name="apply_minima" value="1" {% if state.apply_minima %}checked{% endif %}>
+    <span>
+      Latin 4, Magic Theory 3, Artes Liberales 1, and Parma Magica 1
+      ({{ minima_xp }} of {{ appr_pool.budget }} XP).
+      {% include "chargen/rule_link.html" with cite=paths.minima label="Recommended minima" %}
+    </span>
+  </label>
+</section>
+<h2>Abilities</h2>
+<div id="score-editor">
+  {% include "chargen/score_rows.html" with rows=apprenticeship_rows prefix="appr" ability_choices=ability_choices %}
+</div>
+<h2>Arts</h2>
+<p class="meta">
+  {% include "chargen/rule_link.html" with cite=paths.arts label="Hermetic Arts" %}
+</p>
+{% include "chargen/art_rows.html" with prefix="art" phase="appr" %}

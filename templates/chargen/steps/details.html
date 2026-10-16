@@ -1,0 +1,60 @@
+<p class="meta">
+  {% include "chargen/rule_link.html" with cite=paths.personality label="Personality" %}
+  · {% include "chargen/rule_link.html" with cite=paths.confidence label="Confidence" %}
+  · {% include "chargen/rule_link.html" with cite=paths.equipment label="Equipment" %}
+</p>
+{% if confidence %}
+  <p class="cg-meter" role="status">
+    Confidence score {{ confidence.0 }}, with {{ confidence.1 }} confidence points.
+    The score is how sure the character is. The points are what they can spend.
+  </p>
+{% else %}
+  <p class="cg-meter" role="status">Grogs do not have Confidence.</p>
+{% endif %}
+<h2>Personality traits</h2>
+<p class="meta">
+  {% if kind == "grog" %}Grogs often include Loyal.{% else %}Warriors often include Brave.{% endif %}
+  Add a suggestion only if you want it on the sheet.
+</p>
+<table class="score-table">
+  <thead>
+    <tr>
+      <th>Personality trait</th>
+      <th>Score</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for trait in personality_rows %}
+      <tr>
+        <td>
+          <label class="visually-hidden" for="trait-name-{{ forloop.counter }}">Trait</label>
+          <input id="trait-name-{{ forloop.counter }}" type="text" name="trait_name" value="{{ trait.trait }}">
+        </td>
+        <td class="cg-trait-score">
+          <label class="visually-hidden" for="trait-score-{{ forloop.counter }}">Score</label>
+          <input id="trait-score-{{ forloop.counter }}" class="score-input" type="number" name="trait_score" value="{{ trait.score }}" min="-6" max="6">
+          {% if forloop.last %}
+            {% if kind == "grog" %}
+              <button type="submit" name="suggest_trait" value="Loyal" class="cg-row-action">Add Loyal</button>
+            {% endif %}
+            <button type="submit" name="suggest_trait" value="Brave" class="cg-row-action">Add Brave</button>
+            <button type="submit" name="action" value="add_trait" class="cg-row-action">Add trait</button>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if reputation_open %}
+  <label>
+    Reputation
+    <input type="text" name="reputation" value="{{ state.reputation }}">
+    <span class="meta">A Virtue or Flaw on this sheet grants a Reputation.</span>
+  </label>
+{% else %}
+  <p class="meta">Reputation opens when a Virtue or Flaw grants one.</p>
+{% endif %}
+<label>
+  Equipment
+  <textarea name="equipment" rows="4">{{ state.equipment }}</textarea>
+</label>

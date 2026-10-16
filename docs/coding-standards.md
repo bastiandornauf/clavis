@@ -76,6 +76,7 @@ Clavis is one application with bounded modules:
 | **search** | Indexing, queries, hit presentation |
 | **catalog** | Structured entries and evidence (deferred) |
 | **campaigns** | Campaigns and collected sources |
+| **chargen** | ClavisGen: character creation (Core tables + Lexicon; worksheet at `/gen/new/`) |
 | **annotations** | Bookmarks and personal notes |
 
 Modules talk through defined interfaces. Example: search knows the library

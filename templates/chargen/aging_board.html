@@ -1,0 +1,59 @@
+<table class="score-table">
+  <thead>
+    <tr>
+      <th>Winter</th>
+      <th>Die</th>
+      <th>Result</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in aging_inputs %}
+      <tr>
+        <td>Age {{ row.age }}</td>
+        <td>
+          <label class="visually-hidden" for="aging-die-{{ row.age }}">Age {{ row.age }} die</label>
+          {% if row.early %}
+            <input id="aging-die-{{ row.age }}" class="score-input chargen-live" type="number" name="aging_early_{{ row.age }}" value="{{ row.die }}" min="0" hx-preserve>
+          {% else %}
+            <input id="aging-die-{{ row.age }}" class="score-input chargen-live" type="number" name="aging_die" value="{{ row.die }}" min="0" hx-preserve>
+          {% endif %}
+          <button
+            type="button"
+            class="cg-row-action"
+            hx-post="{% url 'chargen:new' %}"
+            hx-include="#cg-form"
+            hx-vals='{"action": "live", "roll_age": "{{ row.age }}"}'
+            hx-swap="none"
+          >Roll</button>
+        </td>
+        <td class="meta">
+          {% if row.result %}
+            Die {{ row.result.die }}{% if row.result.capped %} (counted as 9){% endif %}, total {{ row.result.total }}
+            · apparent age +{{ row.result.apparent }}
+            {% for note in row.result.notes %}
+              · {{ note }}
+            {% endfor %}
+            {% if row.result.crisis %}
+              · Crisis
+              <label class="visually-hidden" for="crisis-die-{{ row.age }}">Crisis die at age {{ row.age }}</label>
+              <input id="crisis-die-{{ row.age }}" class="score-input chargen-live" type="number" name="crisis_die_{{ row.age }}" value="{{ row.result.crisis_die|default:'' }}" min="1" max="10" hx-preserve>
+              <button
+                type="button"
+                class="cg-row-action"
+                hx-post="{% url 'chargen:new' %}"
+                hx-include="#cg-form"
+                hx-vals='{"action": "live", "roll_crisis": "{{ row.age }}"}'
+                hx-swap="none"
+              >Roll crisis</button>
+              {% if row.result.crisis_total != None %} · total {{ row.result.crisis_total }}{% endif %}
+              {% if row.result.crisis_label %} · {{ row.result.crisis_label }}{% endif %}
+            {% endif %}
+          {% else %}
+            Not rolled
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{{ aging_die_values|json_script:"aging-dice-values" }}

@@ -21,6 +21,7 @@ def test_workspace_tabs_and_nav_redirects(client):
     assert page.status_code == 200
     assert b"Workspace" in page.content
     assert b"Rhine saga" in page.content
+    assert b"?tab=characters" in page.content
 
     bookmarks = client.get(reverse("campaigns:workspace"), {"tab": "bookmarks"})
     assert bookmarks.status_code == 200

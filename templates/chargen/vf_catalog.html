@@ -1,0 +1,69 @@
+<div id="vf-catalog">
+  <input type="hidden" name="vf_page" value="{{ vf_page }}">
+  {% if not vf_filtered %}
+    <p class="empty-state">Search by name, or choose a magnitude or category. {{ vf_available }} {{ vf_kind }}s are in the Lexicon.</p>
+  {% else %}
+  <p class="filter-count">
+    {{ vf_match_count }} {{ vf_kind }}{{ vf_match_count|pluralize }}
+    {% if vf_match_count %}· {{ vf_page_start }}–{{ vf_page_end }}{% endif %}
+    {% if vf_pages > 1 %}· {{ vf_page }}/{{ vf_pages }}{% endif %}
+  </p>
+  <ul class="cg-pick cg-pick--line">
+    {% for entry in catalog %}
+      <li>
+        <span class="cg-pick__name">{{ entry.name }}</span>
+        <span class="cg-pick__meta">{{ entry.magnitude }}</span>
+        {% include "chargen/rule_link.html" with cite=entry.section_path label=entry.name quiet=True %}
+        {% if entry.target_prompt %}
+          <label class="cg-pick__target">
+            {{ entry.target_prompt.label }}
+            {% if entry.target_prompt.options %}
+              <select name="add_target_{{ entry.slug }}">
+                <option value="">Choose</option>
+                {% for option in entry.target_prompt.options %}
+                  <option value="{{ option }}">{{ option }}</option>
+                {% endfor %}
+              </select>
+            {% else %}
+              <input type="text" name="add_target_{{ entry.slug }}" placeholder="{{ entry.target_prompt.label }}">
+            {% endif %}
+          </label>
+        {% else %}
+          <input
+            type="text"
+            class="cg-note"
+            name="add_target_{{ entry.slug }}"
+            placeholder="{{ entry.note_label }}"
+            aria-label="{{ entry.note_label }} for {{ entry.name }}"
+          >
+        {% endif %}
+        <button type="submit" name="add_slug" value="{{ entry.slug }}" class="cg-row-action">Add</button>
+      </li>
+    {% empty %}
+      <li class="empty-state">No matching Core {{ vf_kind }}s.</li>
+    {% endfor %}
+  </ul>
+  {% if vf_pages > 1 %}
+    <nav class="cg-pager" aria-label="Virtue and Flaw pages">
+      {% if vf_prev_page %}
+        <a
+          href="?{{ vf_prev_qs }}"
+          hx-get="{% url 'chargen:new' %}?{{ vf_prev_qs }}"
+          hx-select="#vf-catalog"
+          hx-target="#vf-catalog"
+          hx-swap="outerHTML"
+        >Previous</a>
+      {% endif %}
+      {% if vf_next_page %}
+        <a
+          href="?{{ vf_next_qs }}"
+          hx-get="{% url 'chargen:new' %}?{{ vf_next_qs }}"
+          hx-select="#vf-catalog"
+          hx-target="#vf-catalog"
+          hx-swap="outerHTML"
+        >Next</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+  {% endif %}
+</div>

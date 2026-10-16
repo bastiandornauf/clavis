@@ -1,0 +1,19 @@
+<div id="chargen-checklist" hx-swap-oob="true">
+  {% if step_checklist %}
+    <div class="chargen-needed" role="status">
+      <p>Still needed before Continue:</p>
+      <ul>
+        {% for item in step_checklist %}
+          <li>
+            {{ item.message }}
+            {% if item.cite %}
+              · {% include "chargen/rule_link.html" with cite=item.cite label="rule" %}
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% elif step != "sheet" %}
+    <p class="notice" role="status">This step is ready. Continue saves it and goes on.</p>
+  {% endif %}
+</div>

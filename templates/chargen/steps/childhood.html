@@ -1,0 +1,26 @@
+<p>Early-childhood Abilities: {{ childhood_list|join:", " }}.</p>
+<fieldset class="package-list">
+  <legend>Childhood packages</legend>
+  <p class="cg-busy" role="status">Updating the childhood list.</p>
+  <label>
+    <input type="radio" class="chargen-live" name="childhood_package" value="" {% if not state.childhood_package %}checked{% endif %}>
+    <span>
+      Your own scores
+    </span>
+  </label>
+  {% for package in packages %}
+    <label>
+      <input type="radio" class="chargen-live" name="childhood_package" value="{{ package.name }}" {% if state.childhood_package == package.name %}checked{% endif %}>
+      <span>
+        {{ package.name }}
+        <span class="meta">{{ package.summary }}</span>
+      </span>
+    </label>
+  {% endfor %}
+</fieldset>
+<div id="score-editor">
+  {% include "chargen/childhood_editor.html" %}
+</div>
+<p class="meta">
+  {% include "chargen/rule_link.html" with cite=paths.sample_childhoods label="Sample childhoods" %}
+</p>

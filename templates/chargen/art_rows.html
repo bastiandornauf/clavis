@@ -1,0 +1,37 @@
+<p class="score-legend">XP is toward the next score and need not complete it.</p>
+<h3>Techniques</h3>
+<table class="score-table">
+  <thead>
+    <tr>
+      <th>Art</th>
+      <th>Score</th>
+      <th>Toward next</th>
+      <th>This phase</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in arts %}
+      {% if row.name in techniques %}
+        {% include "chargen/art_row.html" %}
+      {% endif %}
+    {% endfor %}
+  </tbody>
+</table>
+<h3>Forms</h3>
+<table class="score-table">
+  <thead>
+    <tr>
+      <th>Art</th>
+      <th>Score</th>
+      <th>Toward next</th>
+      <th>This phase</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in arts %}
+      {% if row.name in forms %}
+        {% include "chargen/art_row.html" %}
+      {% endif %}
+    {% endfor %}
+  </tbody>
+</table>

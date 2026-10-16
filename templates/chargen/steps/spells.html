@@ -1,0 +1,112 @@
+<div class="cg-picked">
+  <h2>Known spells</h2>
+  {% if state.spells %}
+    <ul class="cg-pick cg-pick--line">
+      {% for spell in state.spells %}
+        <li>
+          <span class="cg-pick__name">{{ spell.name }}</span>
+          <span class="cg-pick__meta">{{ spell.technique }} {{ spell.form }} {{ spell.level }}</span>
+          <button type="submit" name="remove_spell" value="{{ forloop.counter0 }}" class="cg-row-action">Remove</button>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="empty-state">No spells yet.</p>
+  {% endif %}
+</div>
+
+<section id="spell-finder" class="vf-finder cg-block">
+  <h2>Find a spell you can learn</h2>
+  <p class="meta">
+    {% include "chargen/rule_link.html" with cite=paths.apprenticeship label="Apprenticeship spells" %}
+  </p>
+  <div class="filter-bar vf-filter">
+    <label>
+      Technique
+      <select
+        name="spell_filter_te"
+        hx-get="{% url 'chargen:new' %}"
+        hx-vals='{"step": "spells"}'
+        hx-include=".vf-filter"
+        hx-select="#spell-catalog"
+        hx-target="#spell-catalog"
+        hx-swap="outerHTML"
+        hx-trigger="change consume"
+      >
+        <option value="">Any</option>
+        {% for name in techniques %}
+          <option value="{{ name }}" {% if spell_te == name %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Form
+      <select
+        name="spell_filter_fo"
+        hx-get="{% url 'chargen:new' %}"
+        hx-vals='{"step": "spells"}'
+        hx-include=".vf-filter"
+        hx-select="#spell-catalog"
+        hx-target="#spell-catalog"
+        hx-swap="outerHTML"
+        hx-trigger="change consume"
+      >
+        <option value="">Any</option>
+        {% for name in forms %}
+          <option value="{{ name }}" {% if spell_fo == name %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Name
+      <input
+        type="search"
+        name="spell_q"
+        value="{{ spell_query }}"
+        placeholder="Search by name"
+        hx-get="{% url 'chargen:new' %}"
+        hx-vals='{"step": "spells"}'
+        hx-include=".vf-filter"
+        hx-select="#spell-catalog"
+        hx-target="#spell-catalog"
+        hx-swap="outerHTML"
+        hx-trigger="input delay:300ms consume, search consume"
+      >
+    </label>
+  </div>
+  {% include "chargen/spell_catalog.html" %}
+</section>
+
+<section class="cg-block">
+  <h2>Invent a spell</h2>
+  {% if form_notice %}
+    <p class="notice" role="status">{{ form_notice }}</p>
+  {% endif %}
+  <div class="cg-fields">
+    <label>
+      Name
+      <input type="text" name="spell_name">
+    </label>
+    <label>
+      Technique
+      <select name="spell_te">
+        {% for name in techniques %}
+          <option value="{{ name }}">{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Form
+      <select name="spell_fo">
+        {% for name in forms %}
+          <option value="{{ name }}">{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Level
+      <input type="number" name="spell_level" min="1" placeholder="Level">
+    </label>
+  </div>
+  <button type="submit" name="action" value="save" class="cg-row-action">Add invented spell</button>
+</section>

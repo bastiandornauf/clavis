@@ -54,17 +54,30 @@
 @layer components {
 html {
   font-size: 112.5%;
+  background-color: var(--color-bg);
 }
 
 body {
+  position: relative;
+  z-index: 0;
   margin: 0;
   min-height: 100vh;
   color: var(--color-ink);
+  background: transparent;
+  font-family: var(--font-body);
+  line-height: 1.55;
+}
+
+/* Viewport wash. Fixed so the gradient does not travel with the document. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background:
     radial-gradient(circle at top left, #fff8ea 0%, transparent 45%),
     linear-gradient(180deg, #ebe4d6 0%, var(--color-bg) 40%, #e7dfd0 100%);
-  font-family: var(--font-body);
-  line-height: 1.55;
 }
 
 a {
@@ -579,8 +592,24 @@ label {
   color: var(--color-ink-muted);
 }
 
+fieldset {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  margin: 0 0 var(--space-3);
+  min-width: 0;
+}
+
+legend {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--color-ink-muted);
+  padding: 0 var(--space-1);
+}
+
 input[type="text"],
 input[type="search"],
+input[type="number"],
 select,
 textarea {
   font: inherit;
@@ -1440,5 +1469,18 @@ h6.prose-block__title,
 .site-footer__inner {
   display: grid;
   gap: var(--space-2);
+}
+}
+
+@layer utilities {
+@media print {
+  body::before,
+  .site-header,
+  .site-footer,
+  .skip-link,
+  .toolbar,
+  .subnav {
+    display: none;
+  }
 }
 }

@@ -2,10 +2,11 @@
 
 {% block content %}
   <h1 class="page-title">Workspace</h1>
-  <p class="lede">Bookmarks, notes, and campaigns for session prep.</p>
+  <p class="lede">Bookmarks, notes, campaigns, and characters for session prep.</p>
 
   <nav class="subnav" aria-label="Workspace sections">
     <a href="{% url 'campaigns:workspace' %}?tab=campaigns" {% if tab == 'campaigns' %}aria-current="page"{% endif %}>Campaigns</a>
+    <a href="{% url 'campaigns:workspace' %}?tab=characters" {% if tab == 'characters' %}aria-current="page"{% endif %}>Characters</a>
     <a href="{% url 'campaigns:workspace' %}?tab=bookmarks" {% if tab == 'bookmarks' %}aria-current="page"{% endif %}>Bookmarks</a>
     <a href="{% url 'campaigns:workspace' %}?tab=notes" {% if tab == 'notes' %}aria-current="page"{% endif %}>Notes</a>
   </nav>
@@ -24,6 +25,26 @@
       </ul>
     {% else %}
       <div class="empty-state">No campaigns yet.</div>
+    {% endif %}
+  {% elif tab == 'characters' %}
+    <p><a class="button" href="{% url 'chargen:home' %}">New character</a></p>
+    {% if characters %}
+      <ul class="result-list">
+        {% for character in characters %}
+          <li>
+            <h2><a href="{% url 'chargen:open' character.pk %}">{{ character.name }}</a></h2>
+            <p class="meta">
+              {{ character.character_type|default:"Character"|title }}
+              {% if character.house %} · {{ character.house }}{% endif %}
+              {% if character.age %} · age {{ character.age }}{% endif %}
+              {% if character.campaign %} · {{ character.campaign.name }}{% endif %}
+              · updated {{ character.updated_at }}
+            </p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-state">No saved characters yet. Finish a sheet in ClavisGen and save it here.</div>
     {% endif %}
   {% elif tab == 'bookmarks' %}
     {% if bookmarks %}

@@ -1,0 +1,94 @@
+<aside id="cg-overview" class="cg-overview" hx-swap-oob="true" aria-label="This step and the life path">
+  <div id="cg-open" class="{% if show_gaps and step_checklist %}cg-open{% endif %}" tabindex="-1" {% if focus_gaps %}autofocus{% endif %}>
+    {% if show_gaps and step_checklist %}
+      <p>Still open before Continue</p>
+      <ul>
+        {% for item in step_checklist %}
+          <li>
+            {{ item.message }}
+            {% if item.cite %}
+              {% include "chargen/rule_link.html" with cite=item.cite label=item.rule %}
+            {% endif %}
+            {% if item.filter_kind and step == "virtues" %}
+              <button
+                type="button"
+                class="cg-row-action"
+                hx-get="{% url 'chargen:new' %}?step=virtues&amp;kind={{ item.filter_kind }}{% if item.filter_magnitude %}&amp;vf_magnitude={{ item.filter_magnitude }}{% endif %}{% if item.filter_category %}&amp;vf_category={{ item.filter_category|urlencode }}{% endif %}"
+                hx-select="#vf-catalog"
+                hx-target="#vf-catalog"
+                hx-swap="outerHTML"
+              >{{ item.filter_label }}</button>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+  <div class="cg-sheet">
+    <h2>This step</h2>
+    <p class="cg-sheet__now">{{ step_label }}</p>
+    <h2>On the sheet</h2>
+    <dl>
+      <div>
+        <dt>Name</dt>
+        <dd>{{ state.name|default:"—" }}</dd>
+      </div>
+      <div>
+        <dt>Type</dt>
+        <dd>{{ kind|default:"—"|title }}{% if state.house %} · {{ state.house }}{% endif %}</dd>
+      </div>
+      <div>
+        <dt>Age</dt>
+        <dd>{{ age }}</dd>
+      </div>
+    </dl>
+    {% if step == "virtues" %}
+      <h3>Virtues and Flaws</h3>
+      <p>{{ sheet.virtue_line|default:"None" }}</p>
+    {% endif %}
+    {% if step == "characteristics" or step == "aging" %}
+      <h3>Characteristics</h3>
+      <p>{{ sheet.char_mental }}<br>{{ sheet.char_physical }}</p>
+      {% if sheet.aging_points %}<p>{{ sheet.aging_points }}</p>{% endif %}
+    {% endif %}
+    {% if step == "childhood" or step == "later_life" or step == "apprenticeship" or step == "after" or step == "details" %}
+      <h3>Abilities</h3>
+      <p>{{ sheet.ability_line|default:"None" }}</p>
+    {% endif %}
+    {% if kind == "magus" and step == "apprenticeship" or kind == "magus" and step == "after" %}
+      <h3>Arts</h3>
+      <p>
+        {% for line in sheet.art_lines %}
+          {{ line }}{% if not forloop.last %}<br>{% endif %}
+        {% endfor %}
+      </p>
+    {% endif %}
+    {% if step == "spells" or step == "after" %}
+      <h3>Spells</h3>
+      <p>
+        {% for line in sheet.spell_lines %}
+          {{ line }}{% if not forloop.last %}<br>{% endif %}
+        {% empty %}
+          None
+        {% endfor %}
+      </p>
+    {% endif %}
+    {% if step == "details" %}
+      <h3>Personality</h3>
+      <p>{{ sheet.personality_line|default:"None" }}</p>
+    {% endif %}
+  </div>
+  <nav class="cg-rail" aria-label="Creation steps">
+    <ol>
+      {% for item in life_path %}
+        <li class="{% if item.current %}is-current{% endif %}{% if item.done %} is-done{% endif %}{% if item.locked %} is-locked{% endif %}">
+          <a href="{% url 'chargen:new' %}?step={{ item.key }}" {% if item.current %}aria-current="step"{% endif %}>
+            <span class="cg-rail__n">{{ item.n }}</span>
+            <span class="cg-rail__label">{{ item.label }}</span>
+            <span class="cg-rail__fact">{{ item.summary }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ol>
+  </nav>
+</aside>

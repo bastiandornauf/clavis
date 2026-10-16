@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% include "components/breadcrumbs.html" with breadcrumbs=breadcrumbs %}
+  <h1 class="page-title">Replace the working copy?</h1>
+  <p>
+    This browser holds {{ working_name }}{% if working_type %} ({{ working_type }}){% endif %}.
+    Creating a {{ begin_type.label }} replaces that working copy.
+    Save the sheet to Workspace first if you want to keep it.
+  </p>
+  <div class="chargen-cta">
+    <a class="button secondary" href="{% url 'chargen:new' %}">Keep {{ working_name }}</a>
+    <form method="post" action="{% url 'chargen:reset' %}">
+      {% csrf_token %}
+      <input type="hidden" name="as" value="{{ begin_type.key }}">
+      <button type="submit">Create a {{ begin_type.label }}</button>
+    </form>
+  </div>
+{% endblock %}

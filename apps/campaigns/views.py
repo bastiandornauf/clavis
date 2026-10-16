@@ -10,13 +10,14 @@ from django.views.decorators.http import require_http_methods, require_POST
 from apps.annotations.models import Bookmark, Note
 from apps.campaigns.models import Campaign, CampaignItem
 from apps.campaigns.services import add_excerpt_item, add_section_item, resolve_section
+from apps.chargen.models import Character
 from apps.library.models import Section
 
-WORKSPACE_TABS = frozenset({"campaigns", "bookmarks", "notes"})
+WORKSPACE_TABS = frozenset({"campaigns", "bookmarks", "notes", "characters"})
 
 
 def workspace(request: HttpRequest) -> HttpResponse:
-    """Combined prep surface: campaigns, bookmarks, and notes."""
+    """Combined prep surface: campaigns, characters, bookmarks, and notes."""
     tab = request.GET.get("tab", "campaigns").strip().lower()
     if tab not in WORKSPACE_TABS:
         tab = "campaigns"
@@ -28,6 +29,7 @@ def workspace(request: HttpRequest) -> HttpResponse:
             "campaigns": Campaign.objects.all(),
             "bookmarks": Bookmark.objects.all(),
             "notes": Note.objects.all(),
+            "characters": Character.objects.all(),
             "page_title": "Workspace",
         },
     )
@@ -79,6 +81,7 @@ def campaign_detail(request: HttpRequest, slug: str) -> HttpResponse:
         {
             "campaign": campaign,
             "items": items,
+            "characters": campaign.characters.all(),
             "page_title": campaign.name,
             "breadcrumbs": [
                 {

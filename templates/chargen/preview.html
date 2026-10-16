@@ -1,0 +1,58 @@
+<aside class="chargen-preview" aria-label="On the sheet">
+  <h2>On the sheet</h2>
+  <p class="meta">{{ step_destination }}</p>
+  <dl>
+    <dt>Name</dt>
+    <dd>{{ state.name|default:"—" }}</dd>
+    <dt>Type</dt>
+    <dd>{{ kind|default:"—"|title }}{% if state.house %} · {{ state.house }}{% endif %}</dd>
+    <dt>Age</dt>
+    <dd>{{ age }}</dd>
+  </dl>
+  <h3>Characteristics</h3>
+  <p>
+    {% for row in char_rows %}
+      {{ row.label }} {{ row.play }}{% if not forloop.last %} · {% endif %}
+    {% endfor %}
+  </p>
+  <h3>Abilities</h3>
+  <ul>
+    {% for row in abilities %}
+      {% if row.score or row.leftover or row.bonus %}
+        <li>{% include "chargen/ability_bit.html" %}</li>
+      {% endif %}
+    {% empty %}
+      <li class="meta">None yet</li>
+    {% endfor %}
+  </ul>
+  {% if kind == "magus" %}
+    <h3>Arts</h3>
+    <ul>
+      {% for row in arts %}
+        {% if row.score or row.bonus or row.leftover %}
+          <li>{{ row.name }} {{ row.display }}{% if row.leftover %} ({{ row.leftover }} xp){% endif %}</li>
+        {% endif %}
+      {% empty %}
+        <li class="meta">None yet</li>
+      {% endfor %}
+    </ul>
+    {% if state.spells %}
+      <h3>Spells</h3>
+      <ul>
+        {% for spell in state.spells %}
+          <li>{{ spell.name }} {{ spell.level }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endif %}
+  {% if later_pool %}
+    <p class="meta">
+      Childhood {{ childhood_pool.left }} XP left
+      · later life {{ later_pool.left }} XP left
+      {% if kind == "magus" %}
+        · apprenticeship {{ appr_pool.left }} XP left
+        · {{ spell_left }} spell levels left
+      {% endif %}
+    </p>
+  {% endif %}
+</aside>

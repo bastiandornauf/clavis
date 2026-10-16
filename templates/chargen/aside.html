@@ -1,0 +1,75 @@
+<aside id="chargen-aside" class="chargen-aside" hx-swap-oob="true" aria-label="Life path and sheet">
+  <div class="chargen-panel chargen-panel--sheet" role="region" aria-labelledby="chargen-tab-sheet">
+    <h2 class="visually-hidden">On the sheet</h2>
+    <dl class="chargen-aside__facts">
+      <div>
+        <dt>Name</dt>
+        <dd>{{ state.name|default:"—" }}</dd>
+      </div>
+      <div>
+        <dt>Type</dt>
+        <dd>{{ kind|default:"—"|title }}{% if state.house %} · {{ state.house }}{% endif %}</dd>
+      </div>
+      <div>
+        <dt>Age</dt>
+        <dd>{{ age }}</dd>
+      </div>
+    </dl>
+    <h3>Characteristics</h3>
+    <p class="chargen-aside__scores">
+      {% for row in char_rows %}
+        <span>{{ row.label }} {{ row.play }}</span>
+      {% endfor %}
+    </p>
+    <h3>Abilities</h3>
+    <ul>
+      {% for row in abilities %}
+        {% if row.score or row.leftover or row.bonus %}
+          <li>{% include "chargen/ability_bit.html" %}</li>
+        {% endif %}
+      {% empty %}
+        <li class="meta">None yet</li>
+      {% endfor %}
+    </ul>
+    {% if kind == "magus" %}
+      <h3>Arts</h3>
+      <ul>
+        {% for row in arts %}
+          {% if row.score or row.bonus or row.leftover %}
+            <li>{{ row.name }} {{ row.display }}{% if row.leftover %} ({{ row.leftover }} xp){% endif %}</li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+      {% if state.spells %}
+        <h3>Spells</h3>
+        <ul>
+          {% for spell in state.spells %}
+            <li>{{ spell.name }} {{ spell.level }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <div class="chargen-panel chargen-panel--path" role="region" aria-labelledby="chargen-tab-path">
+    <h2 class="visually-hidden">Life path</h2>
+    <nav aria-label="Creation steps">
+      <ol class="chargen-path">
+        {% for item in life_path %}
+          <li class="chargen-path__item{% if item.current %} is-current{% endif %}{% if item.done %} is-done{% endif %}">
+            <a href="{% url 'chargen:new' %}?step={{ item.key }}" {% if item.current %}aria-current="step"{% endif %}>
+              <span class="chargen-path__n" aria-hidden="true">{{ item.n }}</span>
+              <span class="chargen-path__body">
+                <span class="chargen-path__label">{{ item.label }}</span>
+                {% if item.years %}<span class="chargen-path__years">{{ item.years }}</span>{% endif %}
+                <span class="chargen-path__pool">{{ item.summary }}</span>
+              </span>
+            </a>
+          </li>
+        {% endfor %}
+      </ol>
+    </nav>
+  </div>
+
+  {% include "chargen/reset.html" %}
+</aside>

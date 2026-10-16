@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "apps.annotations",
     "apps.campaigns",
     "apps.catalog",
+    "apps.chargen",
 ]
 
 MIDDLEWARE = [
@@ -115,6 +116,10 @@ STORAGES = {
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Chargen PDF fill accepts a user-owned fillable sheet (typical ArMD files are 2–8 MB).
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
 # Optional AI tracks (Phase 1–2). App works fully offline without these.
 CLAVIS_LLM_API_KEY = os.environ.get("CLAVIS_LLM_API_KEY", "").strip()

@@ -1,0 +1,9 @@
+<div class="toolbar chargen-toolbar{% if footer %} chargen-toolbar--end{% endif %}">
+  {% if prev_step %}
+    <button type="submit" name="action" value="back" class="secondary">Back</button>
+  {% endif %}
+  {% if next_step %}
+    <button type="submit" name="action" value="next">Continue</button>
+  {% endif %}
+  <p class="meta chargen-toolbar__hint">Continue saves this step and goes on.</p>
+</div>

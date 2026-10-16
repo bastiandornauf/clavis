@@ -1,0 +1,58 @@
+{% if sheet_blocks %}
+  <aside class="cg-sheet-meta cg-sheet-meta--open">
+    <p>Still open</p>
+    <ul>
+      {% for item in sheet_blocks %}
+        <li>
+          <a href="{% url 'chargen:new' %}?step={{ item.step }}">{{ item.step_label }}</a>:
+          {{ item.message }}
+          {% if item.cite %}
+            {% include "chargen/rule_link.html" with cite=item.cite label=item.rule %}
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </aside>
+{% endif %}
+{% if form_notice %}
+  <p class="notice" role="status">{{ form_notice }}</p>
+{% endif %}
+<nav class="cg-sheet-bar" aria-label="Sheet">
+  <div class="cg-sheet-tools">
+    <a href="{% url 'chargen:print' %}">Print</a>
+    <a href="{% url 'chargen:markdown' %}">Markdown</a>
+    <a href="{% url 'chargen:json' %}">JSON</a>
+    <label class="cg-play-toggle">
+      <input type="checkbox" name="show_play" value="1" form="cg-play" {% if state.show_play %}checked{% endif %} onchange="document.getElementById('cg-play').submit()">
+      Play numbers
+    </label>
+  </div>
+  <details class="cg-sheet-fold"{% if form_notice %} open{% endif %}>
+    <summary>Fill PDF</summary>
+    <div class="cg-pdf-fill">
+      <p>The Definitive Edition fillable sheet you own. Classic print sheets have no fields.</p>
+      <label>
+        Fillable PDF
+        <input type="file" name="sheet_pdf" accept="application/pdf,.pdf" form="cg-pdf">
+      </label>
+      <button type="submit" form="cg-pdf">Fill and download</button>
+    </div>
+  </details>
+  <details class="cg-sheet-fold">
+    <summary>Workspace</summary>
+    <div class="cg-sheet-save">
+      <label>
+        Campaign
+        <select name="campaign" form="cg-save">
+          <option value="">Unassigned</option>
+          {% for campaign in campaigns %}
+            <option value="{{ campaign.pk }}" {% if saved_character.campaign_id == campaign.pk %}selected{% endif %}>{{ campaign.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit" form="cg-save">{% if saved_character %}Update in Workspace{% else %}Save to Workspace{% endif %}</button>
+    </div>
+  </details>
+</nav>
+
+{% include "chargen/sheet_doc.html" %}

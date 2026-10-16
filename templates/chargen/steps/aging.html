@@ -1,0 +1,47 @@
+<p class="meta">
+  {% include "chargen/rule_link.html" with cite=paths.aging label="Aging" %}
+</p>
+<div class="cg-fields cg-fields--2">
+  <label>
+    Living conditions
+    <select class="chargen-live" name="living_conditions">
+      {% for value, label in living_choices %}
+        <option value="{{ value }}" {% if state.living_conditions == value %}selected{% endif %}>{{ label }} ({{ value }})</option>
+      {% endfor %}
+    </select>
+    <span class="meta">0 until you choose. Subtracted from the aging total.</span>
+  </label>
+  <label>
+    Longevity Ritual
+    <input class="chargen-live score-input" type="number" name="longevity" value="{{ state.longevity }}" min="0">
+    <span class="meta">Subtracted from the aging total. 0 until this character has a Longevity Ritual.</span>
+  </label>
+  <label>
+    Ritual since age
+    <input class="chargen-live score-input" type="number" name="longevity_since" value="{% if state.longevity_since %}{{ state.longevity_since }}{% endif %}" min="1" max="35">
+    <span class="meta">Empty means no rolls before 35. Until age 35 a die of 10 or more counts as 9.</span>
+  </label>
+</div>
+{% if aging.ritual_spent_age %}
+  <p class="meta">The Longevity Ritual was spent at age {{ aging.ritual_spent_age }}. Later winters no longer subtract it.</p>
+{% endif %}
+<div id="aging-assign">
+  {% include "chargen/aging_assign.html" %}
+</div>
+<div id="aging-board">
+  {% include "chargen/aging_board.html" %}
+</div>
+<script>
+  document.body.addEventListener("htmx:oobAfterSwap", function (event) {
+    const board = document.getElementById("aging-board");
+    if (!board || !event.target) return;
+    if (event.target !== board && !board.contains(event.target)) return;
+    const node = board.querySelector("#aging-dice-values");
+    if (!node) return;
+    const values = JSON.parse(node.textContent);
+    for (const [id, value] of Object.entries(values)) {
+      const field = document.getElementById(id);
+      if (field && document.activeElement !== field) field.value = value;
+    }
+  });
+</script>
