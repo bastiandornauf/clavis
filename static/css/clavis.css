@@ -1010,34 +1010,6 @@ button.secondary:hover,
   align-items: start;
 }
 
-/* Collapse TOC when the shell (not the viewport alone) is narrow. */
-@container shell (max-width: 54rem) {
-  .reader {
-    grid-template-columns: 1fr;
-  }
-
-  .toc-panel {
-    position: static;
-    height: auto;
-    max-height: min(50vh, 24rem);
-  }
-}
-
-/* Fallback when container queries are unavailable. */
-@supports not (container-type: inline-size) {
-  @media (max-width: 860px) {
-    .reader {
-      grid-template-columns: 1fr;
-    }
-
-    .toc-panel {
-      position: static;
-      height: auto;
-      max-height: min(50vh, 24rem);
-    }
-  }
-}
-
 .reader-kicker {
   margin: 0 0 var(--space-2);
   font-family: var(--font-ui);
@@ -1176,6 +1148,61 @@ label.reading-font select {
   min-height: 0;
 }
 
+.toc-disclosure {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Hidden on a wide shell; the narrow query shows this as the contents control. */
+.toc-summary {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-elevated);
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--color-ink);
+  cursor: pointer;
+  list-style: none;
+}
+
+.toc-summary::-webkit-details-marker,
+.toc-summary::marker {
+  display: none;
+}
+
+.toc-summary::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-top: -0.15rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.toc-disclosure[open] > .toc-summary::after {
+  margin-top: 0.15rem;
+  transform: rotate(225deg);
+}
+
+.toc-summary:hover {
+  color: var(--color-accent);
+}
+
+.toc-summary:focus-visible {
+  box-shadow: var(--focus);
+}
+
 .toc-depth {
   display: flex;
   gap: 0.2rem;
@@ -1269,7 +1296,9 @@ h6.prose-block__title,
 .toc {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1 1 auto;
+  height: calc(100vh - 5rem);
+  max-height: calc(100vh - 5rem);
   min-height: 0;
   overflow: hidden;
   padding: var(--space-3);
@@ -1282,6 +1311,79 @@ h6.prose-block__title,
 
 .toc__chrome {
   flex: 0 0 auto;
+}
+
+/* After the base TOC rules so a narrow shell can fold the tree into one row. */
+@container shell (max-width: 54rem) {
+  .reader {
+    grid-template-columns: 1fr;
+  }
+
+  .toc-panel {
+    position: sticky;
+    top: 4.25rem;
+    height: auto;
+    z-index: 4;
+  }
+
+  .toc-disclosure {
+    height: auto;
+  }
+
+  .toc-summary {
+    display: flex;
+  }
+
+  .toc-disclosure[open] > .toc {
+    flex: none;
+    height: auto;
+    max-height: min(42dvh, 18rem);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+
+  .toc-disclosure[open] > .toc-summary {
+    border-bottom: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+}
+
+@supports not (container-type: inline-size) {
+  @media (max-width: 860px) {
+    .reader {
+      grid-template-columns: 1fr;
+    }
+
+    .toc-panel {
+      position: sticky;
+      top: 4.25rem;
+      height: auto;
+      z-index: 4;
+    }
+
+    .toc-disclosure {
+      height: auto;
+    }
+
+    .toc-summary {
+      display: flex;
+    }
+
+    .toc-disclosure[open] > .toc {
+      flex: none;
+      height: auto;
+      max-height: min(42dvh, 18rem);
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+
+    .toc-disclosure[open] > .toc-summary {
+      border-bottom: 0;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+  }
 }
 
 .toc h2 {
@@ -1966,4 +2068,22 @@ blockquote.passage {
     display: none;
   }
 }
+}
+
+/* The browser hides closed <details> content with an unlayered rule, which
+   beats anything inside @layer. On a wide shell the contents stay open. */
+@supports (container-type: inline-size) {
+  @container shell (min-width: 54.01rem) {
+    .toc-disclosure:not([open]) > .toc {
+      display: flex;
+    }
+  }
+}
+
+@supports not (container-type: inline-size) {
+  @media (min-width: 861px) {
+    .toc-disclosure:not([open]) > .toc {
+      display: flex;
+    }
+  }
 }

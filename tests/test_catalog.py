@@ -5,8 +5,75 @@ from pathlib import Path
 import pytest
 from django.urls import reverse
 
+from apps.catalog.extractors.abilities import extract_ability
 from apps.catalog.models import CatalogEntry
 from apps.sources.services import import_sources
+
+
+class _AbilitySection:
+    def __init__(self, title: str, body: str, *, path: str = "chapter-5-abilities/ability-list/x"):
+        self.title = title
+        self.body_markdown = body
+        self.level = 4
+        self.path = path
+
+
+def test_ability_extractor_reads_the_book_specialties_line():
+    charm = extract_ability(
+        _AbilitySection(
+            "Charm",
+            "Enticing others.\n\n*Specialties*: courtly love, first impressions. (General)",
+        )
+    )
+    assert charm is not None and charm.category == "General"
+    finesse = extract_ability(
+        _AbilitySection(
+            "Finesse",
+            "Targeting spells.\n\n*Specialties:* grace, precision, any one Form. (Arcane)",
+        )
+    )
+    assert finesse is not None and finesse.category == "Arcane"
+    artes = extract_ability(
+        _AbilitySection(
+            "Artes Liberales*",
+            (
+                "The seven arts.\n\n"
+                + ("More.\n\n" * 40)
+                + "*Specialties:* grammar, logic. (Academic)"
+            ),
+        )
+    )
+    assert artes is not None and artes.category == "Academic" and artes.name == "Artes Liberales*"
+    corpse = extract_ability(
+        _AbilitySection(
+            "Corpse Magic*",
+            "Revive a corpse.\n\n*Specialities:* kings, soldiers. (Supernatural)",
+        )
+    )
+    assert corpse is not None and corpse.category == "Supernatural"
+    ken = extract_ability(
+        _AbilitySection(
+            "Animal Ken*",
+            "*Minor, Supernatural*\n\nTalk to animals.\n\nSpecialties*: one animal. (Supernatural)",
+        )
+    )
+    assert ken is not None and ken.category == "Supernatural"
+    heart = extract_ability(
+        _AbilitySection(
+            "Heartbeast*",
+            "Bjornaer shapechanging. It cannot be learned by other characters. (Arcane)",
+        )
+    )
+    assert heart is not None and heart.category == "Arcane"
+    assert (
+        extract_ability(
+            _AbilitySection(
+                "Hex Delay Modifiers",
+                "| Delay | Modifier |\n| moment | -12 |\n\nSpecialties: one method. (Supernatural)",
+            )
+        )
+        is None
+    )
 
 
 @pytest.mark.django_db

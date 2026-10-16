@@ -23,6 +23,7 @@ from apps.chargen.core_tables import (
     CHILDHOOD_ABILITIES,
     CHILDHOOD_YEARS,
     FERAL_CHILDHOOD_ABILITIES,
+    GATED_ABILITY_CATEGORIES,
     GATED_ABILITY_NAMES,
     HERMETIC_FORMS,
     HERMETIC_TECHNIQUES,
@@ -494,6 +495,19 @@ def _as_int(value: object, default: int = 0) -> int:
 def canonical_ability_name(name: str) -> str:
     """Book lists mark some Abilities with a trailing asterisk. One name on the sheet."""
     return name.strip().rstrip("*").strip()
+
+
+def ability_menu_label(name: str, category: str, *, starred: bool = False) -> str:
+    """Dropdown text. ``*`` is the book's untrained bar; restricted is access.
+
+    A trailing asterisk means the Ability cannot be used with no score. Academic,
+    Arcane, Martial, and Supernatural Abilities are a separate limit: a Virtue,
+    or apprenticeship for a magus.
+    """
+    shown = f"{name}*" if starred else name
+    if category.casefold() in GATED_ABILITY_CATEGORIES:
+        return f"{shown} (restricted)"
+    return shown
 
 
 def _ability_key(name: str) -> str:
@@ -2011,12 +2025,9 @@ def _apply_aging_post(state: dict[str, Any], post: QueryDict) -> None:
     if roll_crisis:
         crisis[str(_as_int(roll_crisis, 0))] = simple_die()
     state["aging_crisis"] = crisis
-    living = _year_posted(post, "aging_living_")
     ritual = _year_posted(post, "aging_longevity_", minimum=0)
     if any(str(key).startswith("aging_living_") for key in post):
-        state["aging_living"] = living
-        if living:
-            state["living_conditions"] = int(next(reversed(living.values())))
+        state["aging_living"] = _living_posted(post)
     if any(str(key).startswith("aging_longevity_") for key in post):
         state["aging_longevity"] = ritual
         if ritual:
@@ -2024,10 +2035,39 @@ def _apply_aging_post(state: dict[str, Any], post: QueryDict) -> None:
     if "longevity_since" in post:
         raw = str(post.get("longevity_since", "")).strip()
         state["longevity_since"] = 0 if raw == "" else max(0, _as_int(raw, 0))
+    since = _as_int(state.get("longevity_since"), 0)
+    state["aging_early"] = _winters_kept(state.get("aging_early"), age=age, since=since)
+    state["aging_crisis"] = _winters_kept(state.get("aging_crisis"), age=age, since=since)
+    state["aging_living"] = _winters_kept(state.get("aging_living"), age=age, since=since)
+    state["aging_longevity"] = _winters_kept(state.get("aging_longevity"), age=age, since=since)
+    winters = aging_year_ages(age=age, since=since)
+    if winters:
+        state["living_conditions"] = _living_chain(
+            winters, state.get("aging_living"), _as_int(state.get("living_conditions"), 0)
+        )[winters[0]]
     if "aging_assign" in post:
         state["aging_assign"] = [
             key for raw in post.getlist("aging_assign") if (key := _characteristic_key(raw))
         ]
+
+
+def _winters_kept(stored: object, *, age: int, since: int) -> dict[str, int]:
+    """Drop winters outside the current aging window, including stale years before 36."""
+    if not isinstance(stored, dict):
+        return {}
+    kept: dict[str, int] = {}
+    for key, value in stored.items():
+        try:
+            year = int(key)
+        except (TypeError, ValueError):
+            continue
+        if year >= 36:
+            if year <= age:
+                kept[str(year)] = _as_int(value, 0)
+            continue
+        if 0 < since < 36 and since <= year <= min(age, 35):
+            kept[str(year)] = _as_int(value, 0)
+    return kept
 
 
 def _year_posted(post: QueryDict, prefix: str, *, minimum: int | None = None) -> dict[str, int]:
@@ -2043,6 +2083,44 @@ def _year_posted(post: QueryDict, prefix: str, *, minimum: int | None = None) ->
         if minimum is not None:
             value = max(minimum, value)
         out[year] = value
+    return out
+
+
+def _living_posted(post: QueryDict) -> dict[str, int]:
+    """Explicit living choices. ``prev`` means this winter copies the year before."""
+    out: dict[str, int] = {}
+    for key in post:
+        name = str(key)
+        if not name.startswith("aging_living_"):
+            continue
+        year = name.removeprefix("aging_living_")
+        if not year.isdigit():
+            continue
+        raw = str(post.get(key, "")).strip()
+        if raw == "" or raw == "prev":
+            continue
+        out[year] = _as_int(raw, 0)
+    return out
+
+
+def _living_explicit(stored: object, year: int) -> int | None:
+    blob = stored if isinstance(stored, dict) else {}
+    if str(year) in blob:
+        return _as_int(blob.get(str(year)), 0)
+    if year in blob:
+        return _as_int(blob.get(year), 0)
+    return None
+
+
+def _living_chain(years: list[int], stored: object, start: int) -> dict[int, int]:
+    """Each winter keeps the previous living modifier until a year sets its own."""
+    current = start
+    out: dict[int, int] = {}
+    for year in years:
+        chosen = _living_explicit(stored, year)
+        if chosen is not None:
+            current = chosen
+        out[year] = current
     return out
 
 
@@ -2062,21 +2140,19 @@ def _aging_inputs(
     early = state.get("aging_early") or {}
     living_fallback = _as_int(state.get("living_conditions"), 0)
     ritual_fallback = _as_int(state.get("longevity"), 0)
+    living_chain = _living_chain(years, state.get("aging_living"), living_fallback)
     rows = []
-    for year in years:
+    for index, year in enumerate(years):
         if year >= 36:
-            index = year - 36
-            raw = post35[index] if index < len(post35) else ""
+            slot = year - 36
+            raw = post35[slot] if slot < len(post35) else ""
             early_year = False
         else:
             raw = early.get(str(year), "")
             early_year = True
         result = results.get(year)
-        living = (
-            int(result["living"])
-            if result and "living" in result
-            else _winter_mod(state.get("aging_living"), year, living_fallback)
-        )
+        inherited = index > 0 and _living_explicit(state.get("aging_living"), year) is None
+        living = living_chain[year]
         ritual = (
             int(result["longevity"])
             if result and "longevity" in result
@@ -2088,6 +2164,7 @@ def _aging_inputs(
                 "die": "" if raw in (None, "") else str(raw),
                 "early": early_year,
                 "living": living,
+                "living_inherited": inherited,
                 "longevity": ritual,
                 "result": result,
             }
@@ -2099,7 +2176,8 @@ def _aging_die_values(inputs: list[dict[str, Any]]) -> dict[str, str]:
     values: dict[str, str] = {}
     for row in inputs:
         values[f"aging-die-{row['age']}"] = str(row["die"])
-        values[f"aging-living-{row['age']}"] = str(row["living"])
+        choice = "prev" if row.get("living_inherited") else str(row["living"])
+        values[f"aging-living-{row['age']}"] = choice
         values[f"aging-longevity-{row['age']}"] = str(row["longevity"])
         result = row.get("result") or {}
         if result.get("crisis"):
@@ -2113,19 +2191,8 @@ def _aging_state(state: dict[str, Any], play: dict[str, int]) -> dict[str, Any]:
     since = _as_int(state.get("longevity_since"), 0)
     living_fallback = _as_int(state.get("living_conditions"), 0)
     ritual_fallback = _as_int(state.get("longevity"), 0)
-    extra = []
-    for blob in (state.get("aging_early"), state.get("aging_living"), state.get("aging_longevity")):
-        if not isinstance(blob, dict):
-            continue
-        for key in blob:
-            try:
-                year = int(key)
-            except (TypeError, ValueError):
-                continue
-            if 0 < year < 36:
-                extra.append(year)
-    years = aging_year_ages(age=age, since=since, extra=extra)
-    living = {year: _winter_mod(state.get("aging_living"), year, living_fallback) for year in years}
+    years = aging_year_ages(age=age, since=since)
+    living = _living_chain(years, state.get("aging_living"), living_fallback)
     longevity = {
         year: _winter_mod(state.get("aging_longevity"), year, ritual_fallback) for year in years
     }
@@ -2661,7 +2728,7 @@ def _character_sheet(
             kind=kind,
             house=house if kind == "magus" else "",
             age=age,
-            apparent_age=age + _as_int(aging.get("apparent"), 0),
+            apparent_age=_as_int(aging.get("apparent"), age),
             size=size,
             confidence=confidence,
             decrepitude=(

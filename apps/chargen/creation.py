@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import random
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from math import ceil
 
@@ -485,16 +485,25 @@ def crisis_label(total: int) -> str:
     return "Terminal illness (CrCo 40)"
 
 
-def aging_year_ages(*, age: int, since: int = 0, extra: Sequence[int] = ()) -> list[int]:
-    """Winters that need a roll. ``since`` and stored early years add winters before 36."""
+def aging_year_ages(*, age: int, since: int = 0) -> list[int]:
+    """Winters that need a roll. Empty ``since`` starts at 36.
+
+    An earlier Longevity Ritual includes the winters from that age through 35.
+    Stored living or ritual values do not add winters on their own.
+    """
     years = list(range(36, age + 1)) if age >= 36 else []
-    start = since if 0 < since < 36 else 0
-    for year in extra:
-        if 0 < int(year) < 36:
-            start = int(year) if not start else min(start, int(year))
-    if start:
-        years = list(range(start, min(age, 35) + 1)) + years
+    if 0 < since < 36:
+        years = list(range(since, min(age, 35) + 1)) + years
     return years
+
+
+def apparent_age(*, age: int, no_increase_years: int) -> int:
+    """Biological age, minus winters that added no year of appearance.
+
+    A total of 3 or more adds one apparent year and keeps pace with the birthday.
+    A total of 2 or less adds none, so the character looks a year younger.
+    """
+    return age - max(0, no_increase_years)
 
 
 def _year_modifier(source: int | Mapping[object, object], year: int) -> int:
@@ -505,21 +514,6 @@ def _year_modifier(source: int | Mapping[object, object], year: int) -> int:
             return 0
         return int(raw)
     return int(source or 0)
-
-
-def _early_winters(*blobs: object) -> list[int]:
-    years: list[int] = []
-    for blob in blobs:
-        if not isinstance(blob, Mapping):
-            continue
-        for key in blob:
-            try:
-                year = int(key)
-            except (TypeError, ValueError):
-                continue
-            if 0 < year < 36:
-                years.append(year)
-    return years
 
 
 def _die_at(year: int, post35: list, early: dict) -> int | None:
@@ -563,7 +557,6 @@ def resolve_aging(
     any_unassigned = 0
     any_total = 0
     decrepitude_xp = 0
-    apparent = 0
     crises = 0
     ritual_spent_age: int | None = None
     years: dict[int, dict] = {}
@@ -609,11 +602,7 @@ def resolve_aging(
         elif pending:
             notes.append(f"{pending} aging points, any Characteristic")
 
-    winter_ages = aging_year_ages(
-        age=age,
-        since=since,
-        extra=_early_winters(early, living, longevity),
-    )
+    winter_ages = aging_year_ages(age=age, since=since)
     for year in winter_ages:
         die = _die_at(year, post35, early)
         if die is None:
@@ -631,7 +620,6 @@ def resolve_aging(
         notes: list[str] = []
         for key, amount in outcome.points:
             gain(key, amount, notes)
-        apparent += outcome.apparent_age_increase
         crisis_die = None
         crisis_total = None
         crisis_text = ""
@@ -671,13 +659,14 @@ def resolve_aging(
         }
 
     dec_score, dec_left = ability_score_from_xp(decrepitude_xp)
+    no_increase = sum(1 for row in years.values() if row["apparent"] == 0)
     return {
         "penalties": drops,
         "points_left": stored,
         "any_points": any_unassigned,
         "any_total": any_total,
         "assignments": used,
-        "apparent": apparent,
+        "apparent": apparent_age(age=age, no_increase_years=no_increase),
         "crises": crises,
         "decrepitude_xp": decrepitude_xp,
         "decrepitude_score": dec_score,

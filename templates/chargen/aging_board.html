@@ -38,8 +38,11 @@
         <td>
           <label class="visually-hidden" for="aging-living-{{ row.age }}">Living conditions at age {{ row.age }}</label>
           <select id="aging-living-{{ row.age }}" class="chargen-live" name="aging_living_{{ row.age }}" hx-preserve>
+            {% if not forloop.first %}
+              <option value="prev" {% if row.living_inherited %}selected{% endif %}>As the year before</option>
+            {% endif %}
             {% for value, label in living_choices %}
-              <option value="{{ value }}" {% if row.living == value %}selected{% endif %}>{{ label }} ({{ value }})</option>
+              <option value="{{ value }}" {% if not row.living_inherited and row.living == value %}selected{% endif %}>{{ label }} ({{ value }})</option>
             {% endfor %}
           </select>
         </td>

@@ -9,6 +9,8 @@
 
   <div class="reader">
     <aside class="toc-panel">
+      <details class="toc-disclosure" open>
+      <summary class="toc-summary">Contents</summary>
       <nav class="toc" id="reader-toc" aria-label="Table of contents">
         <div class="toc__chrome">
           <h2>
@@ -41,6 +43,11 @@
       </nav>
       <script>
         (function () {
+          var details = document.querySelector(".toc-disclosure");
+          var summary = details && details.querySelector(".toc-summary");
+          if (details && summary && getComputedStyle(summary).display !== "none") {
+            details.open = false;
+          }
           var list = document.getElementById("toc-list");
           if (!list) return;
           // Keep link navigation from also toggling the disclosure.
@@ -56,6 +63,7 @@
           list.scrollTop += itemRect.top - listRect.top - list.clientHeight / 2 + itemRect.height / 2;
         })();
       </script>
+      </details>
     </aside>
 
     <div class="reader-main">

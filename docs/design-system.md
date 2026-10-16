@@ -82,7 +82,7 @@ default.
 | Citation | `templates/components/citation.html` |
 | Filters / forms | `.filter-bar`, `.stack-form` |
 | Result lists | `.result-list` (container-responsive) |
-| Reader TOC | `.toc` |
+| Reader TOC | `.toc`. On a narrow shell it starts closed behind `.toc-summary` (“Contents”) so the chapter keeps the screen. |
 | Reader header switches | `.reader-heading__controls`, `.view-toggle__label` |
 | Reading options | `.reading-prefs` (collapsed face and line width) |
 | Raw Markdown view (Reader toggle) | `.markdown-source` |

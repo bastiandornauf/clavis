@@ -1,4 +1,11 @@
-<p class="score-legend">Cap {{ ability_cap }} at age {{ age }}. Toward next need not complete the next score.</p>
+<p class="score-legend">
+  Cap {{ ability_cap }} at age {{ age }}. Toward next need not complete the next score.
+  {% if prefix != "child" %}
+    Academic, Arcane, and Martial need a Virtue or Flaw, or a magus during and after apprenticeship.
+    Supernatural Abilities are typed in the custom field.
+    A * cannot be used with no score.
+  {% endif %}
+</p>
 <table class="score-table">
   <thead>
     <tr>
@@ -51,7 +58,7 @@
               {% for group in ability_groups %}
                 <optgroup label="{{ group.grouper }}">
                   {% for item in group.list %}
-                    <option value="{{ item.name }}">{{ item.name }}</option>
+                    <option value="{{ item.name }}">{{ item.label|default:item.name }}</option>
                   {% endfor %}
                 </optgroup>
               {% endfor %}

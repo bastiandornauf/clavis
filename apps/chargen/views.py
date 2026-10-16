@@ -28,6 +28,7 @@ from apps.chargen.worksheet import (
     SESSION_KEY,
     STEP_DESTINATIONS,
     STEP_LABELS,
+    ability_menu_label,
     apply_post,
     blocking_steps,
     canonical_ability_name,
@@ -355,14 +356,31 @@ def _worksheet_context(
         )
     )
     catalog_abilities = []
-    seen_abilities: set[str] = set()
+    seen_abilities: dict[str, int] = {}
     for entry in core_entries("ability"):
-        name = canonical_ability_name(entry.name)
+        raw = entry.name.strip()
+        name = canonical_ability_name(raw)
         key = name.casefold()
-        if not name or key in seen_abilities:
+        if not name:
             continue
-        seen_abilities.add(key)
-        catalog_abilities.append({"name": name, "category": entry.category or "General"})
+        starred = raw.endswith("*")
+        # The Ability list marks the untrained bar with *. A later writeup of the
+        # same Ability often omits it; keep the marked name.
+        if key in seen_abilities and not starred:
+            continue
+        category = entry.category or "General"
+        if category.casefold() == "supernatural":
+            continue
+        row = {
+            "name": name,
+            "label": ability_menu_label(name, category, starred=starred),
+            "category": category,
+        }
+        if key in seen_abilities:
+            catalog_abilities[seen_abilities[key]] = row
+        else:
+            seen_abilities[key] = len(catalog_abilities)
+            catalog_abilities.append(row)
     if step == "childhood":
         allowed = {name.casefold() for name in ctx["childhood_list"]}
         ability_choices = [

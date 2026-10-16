@@ -29,6 +29,8 @@ def test_toc_tree_page_renders(client, fixture_markdown_dir: Path):
 
     shallow = client.get(url, {"toc": "1", "view": "single"})
     assert shallow.status_code == 200
+    assert b"toc-disclosure" in shallow.content
+    assert b"Contents" in shallow.content
     assert b"toc-tree" in shallow.content
     assert b"toc-tree__twist" in shallow.content
     assert b"toc-tree__row" in shallow.content

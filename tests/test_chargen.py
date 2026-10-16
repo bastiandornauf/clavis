@@ -40,6 +40,7 @@ from apps.chargen.creation import (
     add_aging_point,
     aging_outcome,
     aging_total,
+    aging_year_ages,
     aging_years_required,
     art_score_from_xp,
     art_xp_for_score,
@@ -157,6 +158,17 @@ def test_spell_level_cap_is_arts_plus_int_plus_magic_theory_plus_three():
     assert cap == 30
     assert can_know_spell(30, technique=10, form=10, intelligence=3, magic_theory=4)
     assert not can_know_spell(31, technique=10, form=10, intelligence=3, magic_theory=4)
+
+
+def test_ability_menu_marks_restricted_access_not_the_book_asterisk():
+    from apps.chargen.worksheet import ability_menu_label
+
+    assert ability_menu_label("Finesse", "Arcane") == "Finesse (restricted)"
+    assert (
+        ability_menu_label("Parma Magica", "Arcane", starred=True) == "Parma Magica* (restricted)"
+    )
+    assert ability_menu_label("Legerdemain", "General", starred=True) == "Legerdemain*"
+    assert ability_menu_label("Charm", "General") == "Charm"
 
 
 def test_childhood_ability_whitelist():
@@ -993,6 +1005,7 @@ def test_aging_dice_start_empty(client, fixture_markdown_dir: Path):
     assert b'name="aging_living_36"' in page.content
     assert b'name="aging_longevity_36"' in page.content
     assert b'name="living_conditions"' not in page.content
+    assert b"As the year before" in page.content
     assert b"Not rolled" in page.content
 
 
@@ -1739,6 +1752,65 @@ def test_pre35_ritual_die_counts_as_nine():
     assert year["total"] == 9 + 3 - 1
 
 
+def test_aging_starts_at_36_until_a_ritual_age_is_set():
+    from apps.chargen.worksheet import _aging_state
+
+    assert aging_year_ages(age=50, since=0) == list(range(36, 51))
+    assert aging_year_ages(age=50, since=30)[0] == 30
+    state = default_state()
+    state["age"] = 40
+    state["aging_living"] = {str(year): 0 for year in range(1, 36)}
+    state["aging_living"]["36"] = 2
+    rows = _aging_state(state, {})["inputs"]
+    assert [row["age"] for row in rows] == [36, 37, 38, 39, 40]
+    assert rows[0]["living"] == 2
+    assert rows[1]["living"] == 2
+    assert rows[1]["living_inherited"] is True
+
+
+def test_living_follows_the_year_before_until_a_winter_changes():
+    from apps.chargen.worksheet import _aging_state
+
+    state = default_state()
+    state["character_type"] = "companion"
+    state["age"] = 38
+    post = QueryDict(mutable=True)
+    post["aging_living_36"] = "2"
+    post["aging_living_37"] = "prev"
+    post["aging_living_38"] = "prev"
+    state = apply_post("aging", state, post)
+    assert state["aging_living"] == {"36": 2}
+    rows = _aging_state(state, {})["inputs"]
+    assert [row["living"] for row in rows] == [2, 2, 2]
+    assert [row["living_inherited"] for row in rows] == [False, True, True]
+    post = QueryDict(mutable=True)
+    post["aging_living_36"] = "2"
+    post["aging_living_37"] = "-2"
+    post["aging_living_38"] = "prev"
+    state = apply_post("aging", state, post)
+    assert state["aging_living"] == {"36": 2, "37": -2}
+    rows = _aging_state(state, {})["inputs"]
+    assert [row["living"] for row in rows] == [2, -2, -2]
+
+
+def test_apparent_age_drops_only_when_a_winter_adds_no_year():
+    play = {key: 0 for key in ("int", "per", "pre", "com", "str", "sta", "dex", "qik")}
+    resolved = resolve_aging(
+        age=38,
+        post35=[0, 5],
+        early={},
+        crisis_dice={},
+        living=2,
+        longevity=0,
+        since=0,
+        play=play,
+        assignments=[],
+    )
+    assert resolved["years"][36]["apparent"] == 0
+    assert resolved["years"][37]["apparent"] == 1
+    assert resolved["apparent"] == 37
+
+
 def test_aging_living_and_ritual_are_per_winter():
     play = {key: 0 for key in ("int", "per", "pre", "com", "str", "sta", "dex", "qik")}
     resolved = resolve_aging(
@@ -1947,10 +2019,10 @@ def test_identity_uses_apparent_age_wording():
     state = default_state()
     state["character_type"] = "magus"
     state["age"] = 40
-    state["aging_dice"] = [6]
+    state["living_conditions"] = 2
+    state["aging_dice"] = [0]
     identity = sheet_context(state)["sheet"]["identity"]
-    assert "apparent" in identity
-    assert "Age 40 (" in identity
+    assert "Age 40 (apparent 39)" in identity
     payload = sheet_json(sheet_context(state))
     assert payload["age"] == 40
     assert isinstance(payload["age"], int)
